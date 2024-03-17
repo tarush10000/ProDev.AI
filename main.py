@@ -7,3 +7,7 @@ def resource_path(relative_path):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
+class PDA:
+    def __init__(self):
+        self.app = QApplication([])
+        self.init_ui()
