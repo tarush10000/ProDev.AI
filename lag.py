@@ -25,41 +25,36 @@ def Initial_Response(input, Oper_Sys):
         result += chunks
     return result
 
-class MistralGuardrails:
-    def _init_(self):
-        self.llm = Ollama(model="mistral")
+def shell(self, query):
+    llm = Ollama(model="mistral")
+    result = ""
+    for chunks in llm.stream(query):
+        result += chunks
+    return result
 
-    def generate_steps(self, input_text):
-        result = ""
-        for chunks in self.llm.stream(input_text):
-            if chunks.startswith("Step"):
-                result += chunks + "\n"  
-        return result
+def categorize_text(self , input_text):
+    parts = input_text.split('Category:')[1:] 
+    output = []
     
-def Terminal_Response(self, input, Oper_Sys):
-    llm = Ollama(model="mistral")
-    result = "For the steps provided generate the terminal commands for  "+input+" in "+Oper_Sys+" Operating System."
-    for chunks in llm.stream(input):
-        result += chunks
-    return result
-
-def Code_Response(self, input, Oper_Sys):
-    llm = Ollama(model="mistral")
-    result = "Generate the code for " + input + " in " + Oper_Sys + " Operating System."
-    for chunks in llm.stream(input):
-        result += chunks
-    return result
-
-def Explanation_Response(self, input, Oper_Sys):
-    llm = Ollama(model="mistral")
-    result = "Generate the explanation for " + input +" in " + Oper_Sys + " Operating System."
-    for chunks in llm.stream(input):
-        result += chunks
-    return result
-
-def Detailed_Explain_Response(self, input, Oper_Sys):
-    llm = Ollama(model="mistral")
-    result = "Here is the detailed explanation for  " + input +" in " + Oper_Sys + " Operating System."
-    for chunks in llm.stream(input):
-        result += chunks
-    return result
+    for part in parts:
+        lines = part.strip().split('\n', 1)
+        category_name = lines[0].strip()
+        text = lines[1].strip() if len(lines) > 1 else ''
+        output.append({category_name: text})
+    
+    return output
+def runQuery(json_data):            #expects data from categorize_text function
+    for i in json_data:
+        print(i.keys())
+        print(i.values())
+        print("=============================================")
+        if("Shell" in list(i.keys())[0]):
+            query = list(i.values())[0]     #query for shell command generation
+            print(">>>>>>>>>>>running shell function <<<<<<<<<<<<")
+        else:
+            query = list(i.values())[0]     #query for code generation
+            print(">>>>>>>>>>>>running code function <<<<<<<<<<<")
+        result = ""
+        for chunks in llm.stream(query):
+            result += chunks
+            print(chunks ,end="")
