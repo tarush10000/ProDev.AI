@@ -6,6 +6,8 @@ from langchain_community.llms import Ollama
 # import lag
 
 steps = ""
+category = []
+coding = []
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
@@ -24,7 +26,7 @@ class Worker(QObject):
 
     def run_query_1(self):
         llm = Ollama(model="mistral")
-        query = "Write the steps that a software engineer would use in order to make a software using Python with frontend using PyQt that would be able to" + self.input + "each step should be written in a way to classify it into 1 of the following 2 categories -1. Shell -> Needs some code to be written in the Command Prompt or Terminal2. Code -> That can be directly copied and pasted into VS Code3. The steps should be detailed enough that they could be used as a prompt to instruct some AI to do the next task and not contain any code or additional info as it would be added later by the other AI on" + self.OS + "operating system"
+        query = "You are an expert software developer and you have been given a task of teaching development using the project that the user provides. Write the steps that a software engineer would use in order to make a software using Python with frontend using PyQt that would be able to" + self.input + "each step should be written in a way to classify it into 1 of the following 2 categories -1. Shell -> Needs some code to be written in the Command Prompt or Terminal2. Code -> That can be directly copied and pasted into VS Code. DO NOT PRINT ANY CODES and generate the steps for " + self.OS + " operating system format. The steps should be in form of a single list with multiple dictionaries where one step is there in one dictionary with keys being category (Code/Shell) , step (description of the step) for each step. Do not give any other text apart from the list. Make sure that the format of list with dictionaries having steps as its elements is retained. Do not give any code or code snippets.The list should be in the form, [{category,step},{category,step},{category,step}....] and should display all the steps and there should not be nested list because all the steps should be in the single list and each dictionary should have only category and step and there should have no codes."
         print(query)
         result = ""
         for chunks in llm.stream(query):
@@ -322,14 +324,50 @@ class PDA(QWidget):
         return result
             
     
-    def run_discription(self, steps_widget, OS, send_icon):        
-        print(">>>>>>>>>>>>running discription function <<<<<<<<<<<")
-        llm = Ollama(model="mistral")
+    def run_discription(self, steps_widget, OS, send_icon):
+        print(">>>>>>>>>>>>running description function <<<<<<<<<<<")
         global steps
-        print("steps : " , steps)
-        json_data = self.categorize_text(steps)
-        print(json_data)
-        self.create_dict(json_data)
+        try:
+            # Attempt to evaluate the expression as is.
+            steps = eval(steps)
+        except SyntaxError:
+            # If a SyntaxError occurs, skip the first character and try again.
+            try:
+                first_occurrence = steps.find('[')
+                second_occurrence = steps.find('[', first_occurrence + 1)
+                steps = eval(steps[second_occurrence:])
+                print(f"Evaluated steps type after SyntaxError handling: {type(steps)}")
+            except Exception as e:
+                # If another error occurs, handle it or return a message.
+                print(f"Error after skipping first character: {e}")
+                return
+
+        # Ensure steps is a list; if not, this could be the source of the AttributeError
+        if not isinstance(steps, list):
+            print("Error: 'steps' is not a list.")
+            return
+
+        global category
+        global coding
+
+        # Assuming category and coding are intended to be lists
+        if 'category' not in globals():
+            category = []
+        if 'coding' not in globals():
+            coding = []
+
+        for item in steps:
+            # Check if the item is a dictionary before attempting to use .get()
+            if isinstance(item, dict):
+                category.append(item.get('category'))
+                coding.append(item.get('step'))
+            else:
+                print(f"Item in steps is not a dictionary: {item}")
+
+        print(category)
+        print(coding)
+
+            
 
 if __name__ == '__main__':
 
