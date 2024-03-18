@@ -8,6 +8,9 @@ from langchain_community.llms import Ollama
 steps = ""
 category = []
 coding = []
+codes = []
+count = 0
+max_count = 0
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
@@ -15,33 +18,6 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 from PyQt5.QtCore import QThread
-
-class CodeGenerationThread(QThread):
-    def __init__(self):
-        super().__init__()
-
-    def run(self):
-        self.generate_codes()
-
-    def generate_codes(self):
-        global codes
-        llm = Ollama(model="codellama:13b")
-        for i in step_dict:
-            j = step_dict[i]
-            if "shell" in j.lower():
-                query = "Write the code for the shell command " + i
-                result = ""
-                for chunks in llm.stream(query):
-                    result += chunks
-                codes.append(result)
-            elif "code" in j.lower():
-                query = "Write the code for the command " + i
-                result = ""
-                for chunks in llm.stream(query):
-                    result += chunks
-                codes.append(result)
-        print(codes)
-
 
 class Worker(QObject):
     finished = pyqtSignal()
@@ -246,6 +222,7 @@ class PDA(QWidget):
         step_next_button.setCursor(Qt.PointingHandCursor)
         step_next_button.setVisible(False)
         step_next_button.setFlat(True)
+        step_next_button.clicked.connect(lambda: self.next_step(step_heading_label, code_heading_label, code_heading_widget, code_text_widget, code_description_heading_widget, code_description_text_widget))
 
         step_description_heading_layout.addWidget(step_prev_button)
         step_description_heading_layout.addWidget(step_heading_label)
@@ -527,7 +504,6 @@ class PDA(QWidget):
         print(">>>>>>>>>>>>running description function <<<<<<<<<<<")
         global steps
         try:
-            # Attempt to evaluate the expression as is.
             steps = eval(steps)
         except SyntaxError:
             # If a SyntaxError occurs, skip the first character and try again.
@@ -548,6 +524,7 @@ class PDA(QWidget):
 
         global category
         global coding
+        global max_count
 
         # Assuming category and coding are intended to be lists
         if 'category' not in globals():
@@ -565,6 +542,7 @@ class PDA(QWidget):
 
         print(category)
         print(coding)
+        max_count = len(category)
 
             
 
@@ -628,6 +606,54 @@ class PDA(QWidget):
                     self.show_error(str(e))
         else:
             self.show_error("Please select a folder first.")
+
+    def prev_step(self, step_heading_label, code_heading_label, code_heading_widget, code_text_widget, code_description_heading_widget, code_description_text_widget):
+        global count
+        global codes
+        if count > 1:
+            count -= 1
+            step_heading_label.setText("Step "+ str(count))
+            code_text_widget.setPlainText(codes[count-1])
+            code_description_text_widget.setPlainText(coding[count-1])
+            if category[count-1].lower() == "shell":
+                code_heading_label.setText("Shell Command")
+                code_heading_widget.setStyleSheet("background-color: #EB5E55; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
+                code_description_heading_widget.setStyleSheet("background-color: #EB5E55; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
+            else:
+                code_heading_label.setText("Code")
+                code_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
+                code_description_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
+
+    def next_step(self, step_heading_label, code_heading_label, code_heading_widget, code_text_widget, code_description_heading_widget, code_description_text_widget):
+        global count
+        global codes
+        global max_count
+        if count < max_count:
+            count += 1
+            step_heading_label.setText("Step "+ str(count))
+            if len(codes) < count:
+                llm = Ollama(model = "codeLlama:13b")
+                if category[count - 1].lower() == "shell":
+                    query = "Write a terminal code for the following instructions: " + str(coding[count-1])
+                else:
+                    prev_code = ""
+                    for i in range(count) and count > 0:
+                        prev_code += codes[i]
+                    query = "Write the relevant python code for the following instructions: " + str(coding[count-1]) + " .The code written till now is: " + str(prev_code) + ". Don't exceed or make any new code not required."
+                print("1")
+                result = llm.invoke(query)
+                print(result)
+                codes.append(result)
+            code_text_widget.setPlainText(codes[count-1])
+            code_description_text_widget.setPlainText(coding[count-1])
+            if category[count-1].lower() == "shell":
+                code_heading_label.setText("Shell Command")
+                code_heading_widget.setStyleSheet("background-color: #EB5E55; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
+                code_description_heading_widget.setStyleSheet("background-color: #EB5E55; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
+            else:
+                code_heading_label.setText("Code")
+                code_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
+                code_description_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
 
 if __name__ == '__main__':
 
