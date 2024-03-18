@@ -5,6 +5,8 @@ import sys, os
 from langchain_community.llms import Ollama
 # import lag
 
+steps = ""
+
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
@@ -28,6 +30,7 @@ class Worker(QObject):
         for chunks in llm.stream(query):
             result += chunks
             self.update_text.emit(chunks)
+            steps = result
         self.finished.emit()
 
 class PDA(QWidget):
@@ -42,25 +45,18 @@ class PDA(QWidget):
         screen_height = self.app.desktop().screenGeometry().height()
         screen_width = self.app.desktop().screenGeometry().width()
         self.setFixedSize(screen_width, screen_height)
-        self.setStyleSheet("background-color: rgb(0, 0, 0);")
+        self.setStyleSheet("background-color: rgb(12, 12, 12);")
         self.showMaximized()
 
         # main layout of the window
         layout = QHBoxLayout()
         layout.setAlignment(Qt.AlignVCenter)
         main_screen_widget = QWidget()
-        main_screen_widget.setStyleSheet("background-color: rgb(0,0,0); color : rgb(255,255,255); padding: 10px")
+        main_screen_widget.setStyleSheet("background-color: rgb(12, 12, 12); color : rgb(255,255,255); padding: 10px")
         main_screen_widget.setLayout(layout)
 
         directory_layout = QVBoxLayout()
-        directory_layout.setAlignment(Qt.AlignVCenter)
-        expected_directory_widget = QWidget()
-        expected_directory_layout = QVBoxLayout()
-        expected_directory_layout.setAlignment(Qt.AlignTop)
-        expected_directory_widget.setLayout(expected_directory_layout)
-        expected_directory_widget.setStyleSheet("background-color: rgb(50,50,50); font-size: 17px; padding: 10px;")
-        expected_directory_widget.setFixedWidth(int(screen_width * 0.15))
-        expected_directory_widget.setFixedHeight(int(screen_height * 0.45))        
+        directory_layout.setAlignment(Qt.AlignVCenter)       
 
         actual_directory_widget = QWidget()
         actual_directory_layout = QVBoxLayout()
@@ -68,9 +64,8 @@ class PDA(QWidget):
         actual_directory_widget.setLayout(actual_directory_layout)
         actual_directory_widget.setStyleSheet("background-color: rgb(50,50,50); font-size: 17px; padding: 10px;")
         actual_directory_widget.setFixedWidth(int(screen_width * 0.15))
-        actual_directory_widget.setFixedHeight(int(screen_height * 0.45))
+        actual_directory_widget.setFixedHeight(int(screen_height * 0.9))
 
-        directory_layout.addWidget(expected_directory_widget)
         directory_layout.addWidget(actual_directory_widget)
 
         workspace_layout = QVBoxLayout()
@@ -87,10 +82,10 @@ class PDA(QWidget):
         step_area_widget.setFixedWidth(int(screen_width * 0.8))
 
         step_layout = QVBoxLayout()
-        step_layout.setAlignment(Qt.AlignVCenter)
+        step_layout.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
         step_widget = QWidget()
         step_widget.setLayout(step_layout)
-        step_widget.setStyleSheet("padding: 10px;  border: 2px solid rgb(255,255,255); border-radius: 20px")
+        step_widget.setStyleSheet("padding: 10px;  border: 1px solid rgb(255,255,255); border-radius: 20px")
         step_edit_play_layout = QHBoxLayout()
         step_edit_play_layout.setAlignment(Qt.AlignRight)
         step_edit_play_widget = QWidget()
@@ -102,6 +97,15 @@ class PDA(QWidget):
         step_edit_button.setIcon(QIcon(step_edit_image))
         step_edit_button.setCursor(Qt.PointingHandCursor)
         step_edit_button.setFlat(True)
+        step_edit_button.clicked.connect(lambda: self.edit_steps(step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button))
+        step_save_button = QPushButton()
+        step_save_image = QPixmap(resource_path('images/save.png'))
+        step_save_image = step_save_image.scaledToHeight(int(screen_height * 0.05))
+        step_save_button.setIcon(QIcon(step_save_image))
+        step_save_button.setCursor(Qt.PointingHandCursor)
+        step_save_button.setFlat(True)
+        step_save_button.setVisible(False)
+        step_save_button.clicked.connect(lambda: self.save_edit_steps(step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button))
         step_play_button = QPushButton()
         step_play_image = QPixmap(resource_path('images/play.png'))
         step_play_image = step_play_image.scaledToHeight(int(screen_height * 0.05))
@@ -110,10 +114,11 @@ class PDA(QWidget):
         step_play_button.setFlat(True)
         
         step_edit_play_layout.addWidget(step_edit_button)
+        step_edit_play_layout.addWidget(step_save_button)
         step_edit_play_layout.addWidget(step_play_button)
 
         step_text_widget = QPlainTextEdit()
-        step_text_widget.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 0px")
+        step_text_widget.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 23px")
         step_text_widget.setFixedWidth(int(screen_width * 0.37))
         step_text_widget.setReadOnly(True)
         step_layout.addWidget(step_edit_play_widget)
@@ -191,6 +196,7 @@ class PDA(QWidget):
             icon_image = QPixmap(resource_path('images/play-blue.png'))
             icon_image = icon_image.scaledToHeight(int(self.app.desktop().screenGeometry().height() * 0.05))
             send_icon.setIcon(QIcon(icon_image))
+            steps_widget.clear()
             self.worker.update_text.connect(lambda text: self.append_text(text, steps_widget, OS))
             self.worker.finished.connect(self.worker_finished)
             self.worker_thread = QThread()
@@ -217,7 +223,21 @@ class PDA(QWidget):
 
     def worker_finished(self):
         self.worker_thread.quit()
-        self.worker_thread.wait()  
+        self.worker_thread.wait()
+
+    def edit_steps(self, step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button):
+        step_edit_button.setVisible(False)
+        step_save_button.setVisible(True)
+        step_text_widget.setReadOnly(False)  
+        step_play_button.setVisible(False)
+
+    def save_edit_steps(self, step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button):
+        step_edit_button.setVisible(True)
+        step_save_button.setVisible(False)
+        step_text_widget.setReadOnly(True)  
+        step_play_button.setVisible(True)
+        steps = step_text_widget.toPlainText()
+        print(steps)
 
 if __name__ == '__main__':
 
