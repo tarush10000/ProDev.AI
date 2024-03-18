@@ -43,6 +43,7 @@ def categorize_text(self , input_text):
         output.append({category_name: text})
     
     return output
+
 def runQuery(json_data):            #expects data from categorize_text function
     for i in json_data:
         print(i.keys())
@@ -58,3 +59,40 @@ def runQuery(json_data):            #expects data from categorize_text function
         for chunks in llm.stream(query):
             result += chunks
             print(chunks ,end="")
+
+
+# llm = Ollama(model="codellama:13b")
+
+
+# query = """
+# 1. Create a new Python file:
+#    - Use any text editor of choice, e.g., Notepad or VSCode to create a new file named "my\_app.py"
+
+# 2. Add necessary imports:
+#    - In the Python file, add import statements for PyQt modules: import sys, from PyQt5.QtWidgets import QApplication, QMainWindow
+
+# 3. Create a class for your application:
+#    - Define a new class inheriting from QMainWindow
+
+# 4. Design UI layout:
+#    - In the class definition, create UI elements (buttons, labels, etc.) using PyQt's UI designer functions
+
+# 5. Implement functionality:
+#    - Write methods for handling button clicks or other user interactions
+
+# 6. Initialize the application:
+#    - In the _init_ method of your class, initialize PyQt and UI elements
+
+# 7. Start the application:
+#    - Add the following code in a new cell in VSCode to start the application: if _name_ == "_main": app = QApplication(sys.argv) my_app = MyApp() sys.exit(app.exec())
+
+# 8. Save and run your Python script:
+#    - Save the file, then open a terminal or command prompt in the folder containing the Python file, and run it with the command python my_app.py.
+
+# 9. Create a separate PyQt frontend file (optional):
+#    - If you wish to separate your frontend logic from the rest of your application, create a new Python file named "my\_frontend.py", then import the necessary functions and classes from "my\_app.py" in this file to use them in your UI design and interactions.
+# """
+# result = ""
+# for chunks in llm.stream(query):
+#     result += chunks
+#     print(chunks ,end="")
