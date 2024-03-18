@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit,QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog, QFileDialog, QTreeView
+from multiprocessing import Process, Queue
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit,QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, QAbstractScrollArea, QSizePolicy
 from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread
 from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor
 import sys, os
@@ -19,31 +20,36 @@ def resource_path(relative_path):
 
 from PyQt5.QtCore import QThread
 
-class CodeGenerationThread(QThread):
-    def __init__(self):
-        super().__init__()
+def generate_codes(step_dict, output_queue):
+    codes = []
+    llm = Ollama(model="codellama:13b")
+    for i in step_dict:
+        j = step_dict[i]
+        if "shell" in j.lower():
+            query = "Write the code for the shell command " + i
+        elif "code" in j.lower():
+            query = "Write the code for the command " + i
+        else:
+            continue
+        result = ""
+        for chunks in llm.stream(query):
+            result += chunks
+        codes.append(result)
+    output_queue.put(codes)
 
-    def run(self):
-        self.generate_codes()
+class CodeGenerationProcess:
+    def __init__(self, step_dict):
+        self.step_dict = step_dict
+        self.output_queue = Queue()
 
-    def generate_codes(self):
-        global codes
-        llm = Ollama(model="codellama:13b")
-        for i in step_dict:
-            j = step_dict[i]
-            if "shell" in j.lower():
-                query = "Write the code for the shell command " + i
-                result = ""
-                for chunks in llm.stream(query):
-                    result += chunks
-                codes.append(result)
-            elif "code" in j.lower():
-                query = "Write the code for the command " + i
-                result = ""
-                for chunks in llm.stream(query):
-                    result += chunks
-                codes.append(result)
-        print(codes)
+    def start(self):
+        self.process = Process(target=generate_codes, args=(self.step_dict, self.output_queue))
+        self.process.start()
+
+    def get_codes(self):
+        self.process.join()
+        return self.output_queue.get()
+       
 
 
 class Worker(QObject):
@@ -57,13 +63,12 @@ class Worker(QObject):
 
     def run_query_1(self):
         llm = Ollama(model="mistral")
-        query = "You are an expert software developer and you have been given a task of teaching development using the project that the user provides. Write the steps that a software engineer would use in order to make a software using Python with frontend using PyQt that would be able to" + self.input + "each step should be written in a way to classify it into 1 of the following 2 categories -1. Shell -> Needs some code to be written in the Command Prompt or Terminal2. Code -> That can be directly copied and pasted into VS Code. DO NOT PRINT ANY CODES and generate the steps for " + self.OS + " operating system format. The steps should be in form of a single list with multiple dictionaries where one step is there in one dictionary with keys being category (Code/Shell) , step (description of the step) for each step. Make sure to give each step which involves any kind of coding."
+        query = "Write the steps that a software engineer would use in order to make a software using Python with frontend using PyQt that would be able to" + self.input + "each step should be written in a way to classify it into 1 of the following 2 categories -1. Shell -> Needs some code to be written in the Command Prompt or Terminal2. Code -> That can be directly copied and pasted into VS Code3. The steps should be detailed enough that they could be used as a prompt to instruct some AI to do the next task and not contain any code or additional info as it would be added later by the other AI on" + self.OS + "operating system"
         print(query)
         result = ""
         for chunks in llm.stream(query):
             result += chunks
-            if chunks is not ['{', '}', '[', ']']:
-                self.update_text.emit(chunks)
+            self.update_text.emit(chunks)
             global steps
             steps = result
         self.finished.emit()
@@ -101,58 +106,11 @@ class PDA(QWidget):
 
         actual_directory_widget = QWidget()
         actual_directory_layout = QVBoxLayout()
-        actual_directory_layout.setSpacing(0)
-        actual_directory_layout.setContentsMargins(0, 0, 0, 0)
         actual_directory_layout.setAlignment(Qt.AlignTop)
         actual_directory_widget.setLayout(actual_directory_layout)
-        actual_directory_widget.setStyleSheet("background-color: rgb(50,50,50); font-size: 17px;")
+        actual_directory_widget.setStyleSheet("background-color: rgb(50,50,50); font-size: 17px; padding: 10px;")
         actual_directory_widget.setFixedWidth(int(screen_width * 0.15))
         actual_directory_widget.setFixedHeight(int(screen_height * 0.9))
-        actual_directory_heading_layout = QHBoxLayout()
-        actual_directory_heading_layout.setContentsMargins(0, 0, 0, 0)
-        actual_directory_heading_layout.setSpacing(0)
-        actual_directory_heading_layout.setAlignment(Qt.AlignVCenter)
-        actual_directory_heading_widget = QWidget()
-        actual_directory_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border: 0px; margin: 0px")
-        actual_directory_heading_widget.setLayout(actual_directory_heading_layout)
-        actual_directory_label = QLabel("Directory")
-        actual_directory_label.setStyleSheet("color: rgb(255,255,255); font-size: 17px; font: Montserrat; border: 0px; font-weight: 500")
-        actual_directory_label.setAlignment(Qt.AlignCenter)
-        directory_folder_browse_image = QPixmap(resource_path('images/browse.png'))
-        directory_folder_browse_image = directory_folder_browse_image.scaledToHeight(int(screen_height * 0.05))
-        directory_folder_browse_button = QPushButton()
-        directory_folder_browse_button.setIcon(QIcon(directory_folder_browse_image))
-        directory_folder_browse_button.setCursor(Qt.PointingHandCursor)
-        directory_folder_browse_button.setFlat(True)
-        directory_folder_browse_button.clicked.connect(self.openFolder)
-        directory_new_folder_image = QPixmap(resource_path('images/newfolder.png'))
-        directory_new_folder_image = directory_new_folder_image.scaledToHeight(int(screen_height * 0.05))
-        directory_new_folder_button = QPushButton()
-        directory_new_folder_button.setIcon(QIcon(directory_new_folder_image))
-        directory_new_folder_button.setCursor(Qt.PointingHandCursor)
-        directory_new_folder_button.setFlat(True)
-        directory_new_folder_button.clicked.connect(self.createFolder)
-        directory_new_file_image = QPixmap(resource_path('images/newfile.png'))
-        directory_new_file_image = directory_new_file_image.scaledToHeight(int(screen_height * 0.05))
-        directory_new_file_button = QPushButton()
-        directory_new_file_button.setIcon(QIcon(directory_new_file_image))
-        directory_new_file_button.setCursor(Qt.PointingHandCursor)
-        directory_new_file_button.setFlat(True)
-        directory_new_file_button.clicked.connect(self.createFile)
-
-        actual_directory_heading_layout.addWidget(actual_directory_label)
-        actual_directory_heading_layout.addWidget(directory_folder_browse_button)
-        actual_directory_heading_layout.addWidget(directory_new_folder_button)
-        actual_directory_heading_layout.addWidget(directory_new_file_button)     
-        
-        directory_tree_view = QTreeView()
-        directory_tree_view.setStyleSheet("")
-
-        actual_directory_layout.addWidget(actual_directory_heading_widget)
-        actual_directory_layout.addWidget(directory_tree_view)
-
-        model = QFileSystemModel()
-        directory_tree_view.setModel(model)
 
         directory_layout.addWidget(logo)
         directory_layout.addWidget(actual_directory_widget)
@@ -277,44 +235,8 @@ class PDA(QWidget):
         code_heading_widget.setFixedHeight(int(screen_height * 0.04))
         code_heading_label = QLabel("Code")
         code_heading_label.setStyleSheet("color: rgb(255,255,255); font-size: 17px; font: Montserrat; border: 0px; font-weight: 500")
-        code_heading_label.setFixedWidth(int(screen_width * 0.3))
-        code_copy_image = QPixmap(resource_path('images/copy.png'))
-        code_copy_image = code_copy_image.scaledToHeight(int(screen_height * 0.03))
-        code_copy_button = QPushButton()
-        code_copy_button.setIcon(QIcon(code_copy_image))
-        code_copy_button.setCursor(Qt.PointingHandCursor)
-        code_copy_button.setFlat(True)
-        code_copy_button.clicked.connect(lambda: self.copy_code(code_text_widget))
-        code_edit_image = QPixmap(resource_path('images/edit.png'))
-        code_edit_image = code_edit_image.scaledToHeight(int(screen_height * 0.03))
-        code_edit_button = QPushButton()
-        code_edit_button.setIcon(QIcon(code_edit_image))
-        code_edit_button.setCursor(Qt.PointingHandCursor)
-        code_edit_button.setFlat(True)
-        code_edit_button.setVisible(True)
-        code_edit_button.clicked.connect(lambda: self.edit_code(code_edit_button, code_save_button, code_text_widget, code_play_button))
-        code_save_image = QPixmap(resource_path('images/save.png'))
-        code_save_image = code_save_image.scaledToHeight(int(screen_height * 0.03))
-        code_save_button = QPushButton()
-        code_save_button.setIcon(QIcon(code_save_image))
-        code_save_button.setCursor(Qt.PointingHandCursor)
-        code_save_button.setFlat(True)
-        code_save_button.setVisible(False)
-        code_save_button.clicked.connect(lambda: self.save_code(code_edit_button, code_save_button, code_text_widget, code_play_button))
-        code_play_image = QPixmap(resource_path('images/play.png'))
-        code_play_image = code_play_image.scaledToHeight(int(screen_height * 0.03))
-        code_play_button = QPushButton()
-        code_play_button.setIcon(QIcon(code_play_image))
-        code_play_button.setCursor(Qt.PointingHandCursor)
-        code_play_button.setFlat(True)
-        code_play_button.setVisible(True)
-        code_play_button.clicked.connect(lambda: self.run_code(code_text_widget, code_play_button))
-        
+
         code_heading_layout.addWidget(code_heading_label)
-        code_heading_layout.addWidget(code_copy_button)
-        code_heading_layout.addWidget(code_edit_button)
-        code_heading_layout.addWidget(code_save_button)
-        code_heading_layout.addWidget(code_play_button)
 
         code_text_layout = QVBoxLayout()
         code_text_widget = QPlainTextEdit()
@@ -339,15 +261,7 @@ class PDA(QWidget):
         code_description_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
         code_description_heading_widget.setFixedHeight(int(screen_height * 0.04)) 
         code_description_heading_label = QLabel("Description")
-        code_description_heading_label.setFixedWidth(int(screen_width * 0.3))
         code_description_heading_label.setStyleSheet("color: rgb(255,255,255); font-size: 17px; font: Montserrat; border: 0px; font-weight: 500")
-        code_description_add_image = QPixmap(resource_path('images/add.png'))
-        code_description_add_image = code_description_add_image.scaledToHeight(int(screen_height * 0.03))
-        code_description_add_button = QPushButton()
-        code_description_add_button.setIcon(QIcon(code_description_add_image))
-        code_description_add_button.setCursor(Qt.PointingHandCursor)
-        code_description_add_button.setFlat(True)
-        code_description_add_button.clicked.connect(lambda: self.add_description(code_text_widget, code_description_text_widget))
         code_description_text_layout = QVBoxLayout()
         code_description_text_widget = QPlainTextEdit()
         code_description_text_widget.setStyleSheet("color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 20px; font: Montserrat; border-top-left-radius: 0px; border-top-right-radius: 0px; border: 0px;")
@@ -355,7 +269,6 @@ class PDA(QWidget):
         code_description_text_widget.setReadOnly(True)
 
         code_description_heading_layout.addWidget(code_description_heading_label)
-        code_description_heading_layout.addWidget(code_description_add_button)
 
         code_description_layout.addWidget(code_description_heading_widget)
         code_description_layout.addWidget(code_description_text_widget)
@@ -533,84 +446,11 @@ class PDA(QWidget):
         print(json_data)
         global step_dict
         step_dict = self.create_dict(json_data)
-        try:
-            if self.code_generation_thread and self.code_generation_thread.isRunning():
-                self.code_generation_thread.quit()
-                self.code_generation_thread.wait()
-        except Exception as e:
-            print(e)
+        code_gen_process = CodeGenerationProcess(step_dict)
+        code_gen_process.start()
+        codes = code_gen_process.get_codes()
+        print(codes)
 
-        try:        
-            if self.worker_thread and self.worker_thread.isRunning():
-                self.worker_thread.quit()
-                self.worker_thread.wait()
-        except Exception as e:
-            print(e)
-    
-
-        code_generation_thread = CodeGenerationThread()
-        code_generation_thread.start()
-        
-    def copy_code(self, code_text_widget):
-        code_text_widget.selectAll()
-        code_text_widget.copy()
-
-    def edit_code(self, code_edit_button, code_save_button, code_text_widget, code_play_button):
-        code_edit_button.setVisible(False)
-        code_save_button.setVisible(True)
-        code_text_widget.setReadOnly(False)  
-        code_play_button.setVisible(False)
-
-    def save_code(self, code_edit_button, code_save_button, code_text_widget, code_play_button):
-        code_edit_button.setVisible(True)
-        code_save_button.setVisible(False)
-        code_text_widget.setReadOnly(True)  
-        code_play_button.setVisible(True)
-        # global codes
-        # codes[count] = code_text_widget.toPlainText()
-
-    def add_description(self, code_text_widget, code_description_text_widget):
-        llm = Ollama(model = "mistral")
-        query = "Explain the given code: " + code_text_widget.toPlainText() + "in a concise manner with the word-count of your response not exceeding 40 words."
-        print(query)
-        result = ""
-        for chunks in llm.stream(query):
-            result += chunks
-            print(chunks)
-        code_description_text_widget.setPlainText(code_description_text_widget.toPlainText() + result)
-
-    def openFolder(self):
-        directory = QFileDialog.getExistingDirectory(self, 'Select Folder')
-        if directory:
-            currentDirectory = directory
-            self.model.setRootPath(directory)
-            self.directory_tree_view.setRootIndex(self.model.index(directory))
-            self.directory_new_file_button.setEnabled(True)
-            self.directory_new_folder_button.setEnabled(True)
-
-    def createFile(self):
-        if self.currentDirectory:
-            name, _ = QFileDialog.getSaveFileName(self, "Create File", self.currentDirectory)
-            if name:
-                with open(name, 'w') as file:
-                    pass
-                self.model.setRootPath(self.currentDirectory)  # Refresh view
-        else:
-            self.show_error("Please select a folder first.")
-
-    def createFolder(self):
-        if self.currentDirectory:
-            folderName, ok = QInputDialog.getText(self, "Create Folder", "Folder name:")
-            if ok and folderName:
-                fullPath = os.path.join(self.currentDirectory, folderName)
-                try:
-                    os.makedirs(fullPath, exist_ok=True)
-                    self.model.setRootPath(self.currentDirectory)  # Refresh view
-                    self.treeView.setRootIndex(self.model.index(self.currentDirectory))
-                except Exception as e:
-                    self.show_error(str(e))
-        else:
-            self.show_error("Please select a folder first.")
 
 if __name__ == '__main__':
 
