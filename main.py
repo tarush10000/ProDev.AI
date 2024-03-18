@@ -30,6 +30,7 @@ class Worker(QObject):
         for chunks in llm.stream(query):
             result += chunks
             self.update_text.emit(chunks)
+            global steps
             steps = result
         self.finished.emit()
 
@@ -112,6 +113,7 @@ class PDA(QWidget):
         step_play_button.setIcon(QIcon(step_play_image))
         step_play_button.setCursor(Qt.PointingHandCursor)
         step_play_button.setFlat(True)
+        step_play_button.clicked.connect(lambda: self.run_discription(step_description_widget, OS, step_play_button))
         
         step_edit_play_layout.addWidget(step_edit_button)
         step_edit_play_layout.addWidget(step_save_button)
@@ -267,8 +269,67 @@ class PDA(QWidget):
         step_save_button.setVisible(False)
         step_text_widget.setReadOnly(True)  
         step_play_button.setVisible(True)
+        global steps
         steps = step_text_widget.toPlainText()
         print(steps)
+    
+    def categorize_text(self , input_text):
+        print(">>>>>>>>>>>>running categorize_text function <<<<<<<<<<<")
+        print(input_text)
+        parts = input_text.split('Category')[1:] 
+        print(parts)    
+        output = []
+        
+        for part in parts:
+            print(">>>>>>>>>>>>running categorize_text function part <<<<<<<<<<<")
+            
+            lines = part.strip().split('\n', 1)
+            category_name = lines[0].strip()
+            text = lines[1].strip() if len(lines) > 1 else ''
+            output.append({category_name: text})
+        
+        return output   
+
+    def format_text_data(self , input_text):
+        lines = input_text.split('\n')
+        formatted_entries = []
+        current_entry = []
+        
+        for line in lines:
+            if line.strip():
+                if line[0].isdigit():
+                    if current_entry:
+                        formatted_entries.append(' '.join(current_entry))
+                        current_entry = []
+                    current_entry.append(line[1:].strip())
+                else:
+                    current_entry.append(line.strip())
+        if current_entry:
+            formatted_entries.append(' '.join(current_entry))
+        
+        return formatted_entries
+
+    def create_dict(self,json_data):
+        result = {}
+        for i in json_data:
+            # print("hello",list(i.values())[0])
+            for command in self.format_text_data(list(i.values())[0]):
+                if "Shell" in list(i.keys())[0]:
+                    result[command] = "Shell"
+                elif "Code" in list(i.keys())[0]:
+                    result[command] = "Code"
+        print ("results >>>>>>>>>>" ,result)
+        return result
+            
+    
+    def run_discription(self, steps_widget, OS, send_icon):        
+        print(">>>>>>>>>>>>running discription function <<<<<<<<<<<")
+        llm = Ollama(model="mistral")
+        global steps
+        print("steps : " , steps)
+        json_data = self.categorize_text(steps)
+        print(json_data)
+        self.create_dict(json_data)
 
 if __name__ == '__main__':
 
