@@ -41,6 +41,7 @@ class Worker(QObject):
             steps = result
         self.finished.emit()
 
+
 class PDA(QWidget):
     def __init__(self):
         super().__init__()
@@ -176,7 +177,7 @@ class PDA(QWidget):
         step_play_button.setIcon(QIcon(step_play_image))
         step_play_button.setCursor(Qt.PointingHandCursor)
         step_play_button.setFlat(True)
-        step_play_button.clicked.connect(lambda: self.run_description(step_description_widget, step_play_button, step_prev_button, step_next_button, step_heading_label))
+        step_play_button.clicked.connect(lambda: self.run_description(step_description_widget, step_play_button, step_prev_button, step_next_button, step_heading_label, step_text_widget))
         
         step_edit_play_layout.addWidget(step_edit_button)
         step_edit_play_layout.addWidget(step_save_button)
@@ -418,7 +419,6 @@ class PDA(QWidget):
         else:
             self.show_error(check)
             return
-        
 
     def check_input(self, user_input):
         llm = Ollama(model="mistral")
@@ -438,6 +438,8 @@ class PDA(QWidget):
         self.worker_thread.wait()
 
     def edit_steps(self, step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button):
+        global steps
+        step_text_widget.setPlainText(steps)
         step_edit_button.setVisible(False)
         step_save_button.setVisible(True)
         step_text_widget.setReadOnly(False)  
@@ -497,12 +499,15 @@ class PDA(QWidget):
         return result
             
     
-    def run_description(self, steps_widget, send_icon, step_prev_button, step_next_button, step_heading_label):        
+    def run_description(self, steps_widget, send_icon, step_prev_button, step_next_button, step_heading_label, step_text_widget):        
+        global result2
+        global steps
+        result2 = self.modify_text(steps)
+        step_text_widget.setPlainText(result2)
         step_prev_button.setVisible(True)
         step_next_button.setVisible(True)
         step_heading_label.setVisible(True)
         print(">>>>>>>>>>>>running description function <<<<<<<<<<<")
-        global steps
         try:
             steps = eval(steps)
         except SyntaxError:
@@ -637,8 +642,9 @@ class PDA(QWidget):
                     query = "Write a terminal code for the following instructions: " + str(coding[count-1])
                 else:
                     prev_code = ""
-                    for i in range(count) and count > 0:
-                        prev_code += codes[i]
+                    for i in range(count):
+                        if count > 1:
+                            prev_code += codes[i - 1]
                     query = "Write the relevant python code for the following instructions: " + str(coding[count-1]) + " .The code written till now is: " + str(prev_code) + ". Don't exceed or make any new code not required."
                 print("1")
                 result = llm.invoke(query)
@@ -654,6 +660,47 @@ class PDA(QWidget):
                 code_heading_label.setText("Code")
                 code_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
                 code_description_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
+
+    def modify_text(self, input_text):
+        modified_text = input_text.replace('[', '').replace(']', '').replace('{', '').replace('},', '\n').replace('}', '\n')
+        lines = modified_text.split('\n')
+        processed_lines = []
+        for line in lines:
+            colon_index = line.find(':')
+            second_colon_index = line.find(':', colon_index + 1)
+            if second_colon_index != -1:
+                line = line[second_colon_index + 1:]
+            line = line.replace('"', '')
+            processed_lines.append(line)
+
+        final_text = ""
+        for i, line in enumerate(processed_lines, start=1):
+            final_text += f"Step {i}: {line}\n"
+        return final_text
+    
+    def run_code(self, code_text_widget, code_play_button):
+        llm = Ollama(model = "mistral")
+        query1 = "Remove all text that is not a code. The following text is based on markdown laguage and provided by CodeLlama. Remove all unnecesary comments along with the text at the top and bottom if present which is explaing the code. Also remove any code that won't work or isn't intended for Windows. Text: " + code_text_widget.toPlainText() + "ONLY HAVE THE CODE AS OUTPUT AND NO COMMENTS OR EXPLANATION AND MAKE NECESSARY SPACING AND ADJUSTMENTS SO THAT THE CODE CAN BE RUN LATER"
+        code = ""
+        for chunks in llm.stream(query1):
+            code += chunks
+        query2 = "Take the following text and reply any 1 of the 3 words that suit it (NOTHING OTHER THAN THE 3 WORDS) - Code -> if the text provided can be directly run in python, Terminal -> if the text provided is a terminal code, None -> if the text provided is just simple steps or instructions and doesn't have any code. Text: " + code + ". YOUR REPLY SHOULD BE JUST A SINGLE WORD"
+        check = ""
+        for chunks in llm.stream(query2):
+            check += chunks
+        
+        if "terminal" in check.lower():
+            code_text_widget.setPlainText(code)
+        elif "code" in check.lower():
+            code_text_widget.setPlainText(code)
+            file_name = "helo.py"
+            code_text = code
+            mode = 'a' if os.path.exists(file_name) else 'w'
+            with open(file_name, mode) as file:
+                file.write(code_text)
+            print(f"Your code has been {'appended to' if mode == 'a' else 'written in'} {file_name}.")
+        else:
+            pass
 
 if __name__ == '__main__':
 
