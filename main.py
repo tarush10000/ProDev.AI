@@ -1,9 +1,9 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit,QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog, QFileDialog, QTreeView
-from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread
-from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QMessageBox, QStyle, QPlainTextEdit, QFileSystemModel, QInputDialog, QFileDialog, QTreeView, QDialog, QLineEdit
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread
+from PyQt5.QtGui import QPixmap, QIcon, QTextCursor
 import sys, os
 from langchain_community.llms import Ollama
-# import lag
+import re
 
 steps = ""
 category = []
@@ -662,21 +662,35 @@ class PDA(QWidget):
                 code_description_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
 
     def modify_text(self, input_text):
+        # Step 1: Remove unwanted characters
         modified_text = input_text.replace('[', '').replace(']', '').replace('{', '').replace('},', '\n').replace('}', '\n')
+
+        # Step 2: Split the text into lines
         lines = modified_text.split('\n')
+
+        # Step 3: Process each line
         processed_lines = []
         for line in lines:
+            # Step 4: Check and remove text before the 2nd instance of ':'
             colon_index = line.find(':')
             second_colon_index = line.find(':', colon_index + 1)
             if second_colon_index != -1:
                 line = line[second_colon_index + 1:]
-            line = line.replace('"', '')
-            processed_lines.append(line)
 
+            # Step 5: Remove inverted commas
+            line = line.replace('"', '')
+
+            # Step 6: Remove blank lines
+            if line.strip():  # Check if line is not empty after stripping whitespace
+                processed_lines.append(line)
+
+        # Step 7: Write step number before each new line
         final_text = ""
         for i, line in enumerate(processed_lines, start=1):
             final_text += f"Step {i}: {line}\n"
+        
         return final_text
+
     
     def run_code(self, code_text_widget, code_play_button):
         llm = Ollama(model = "mistral")
@@ -691,16 +705,66 @@ class PDA(QWidget):
         
         if "terminal" in check.lower():
             code_text_widget.setPlainText(code)
+            
+
         elif "code" in check.lower():
             code_text_widget.setPlainText(code)
-            file_name = "helo.py"
-            code_text = code
-            mode = 'a' if os.path.exists(file_name) else 'w'
+            app = QApplication([])
+            file_name_prompt = QLineEdit()
+            dialog = QDialog()
+            dialog.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); padding: 10px")
+            layout = QVBoxLayout()
+            layout.addWidget(QLabel("Enter the name of the file to save the code as:"))
+            layout.addWidget(file_name_prompt)
+            accept_reject_layout = QHBoxLayout()
+            dialog.setLayout(layout)
+            file_accept_image = QPixmap(resource_path("images/accept.png"))
+            file_accept_image = file_accept_image.scaledToHeight(int(app.desktop().screenGeometry().height() * 0.05))
+            file_accept_button = QPushButton()
+            file_accept_button.setIcon(QIcon(file_accept_image))
+            file_accept_button.setCursor(Qt.PointingHandCursor)
+            file_accept_button.setFlat(True)
+            file_accept_button.clicked.connect(dialog.accept)
+            accept_reject_layout.addWidget(file_accept_button)
+            file_cancel_image = QPixmap(resource_path("images/cancel.png"))
+            file_cancel_image = file_cancel_image.scaledToHeight(int(app.desktop().screenGeometry().height() * 0.05))
+            file_cancel_button = QPushButton()
+            file_cancel_button.setIcon(QIcon(file_cancel_image))
+            file_cancel_button.setCursor(Qt.PointingHandCursor)
+            file_cancel_button.setFlat(True)
+            file_cancel_button.clicked.connect(dialog.reject)
+            accept_reject_layout.addWidget(file_cancel_button)
+            layout.addLayout(accept_reject_layout)
+            if dialog.exec_():
+                file_name = file_name_prompt.text()
+            else:
+                file_name = None
+            code_text, markdown_detected = self.detect_and_remove_markdown(code)
+            print(f"Markdown detected: {markdown_detected}")
+            app.quit()
+            mode = 'w'
             with open(file_name, mode) as file:
                 file.write(code_text)
-            print(f"Your code has been {'appended to' if mode == 'a' else 'written in'} {file_name}.")
+            # print(f"Your code has been {'appended to' if mode == 'a' else 'written in'} {file_name}.")
         else:
             pass
+
+    def detect_and_remove_markdown(self, code_text):
+        # Define Markdown code block pattern for triple backticks, capturing content inside
+        markdown_pattern = r'```(?:[\s\S]*?)\n?([\s\S]*?)\n?```'
+
+        # Use re.findall to check if Markdown code blocks are present
+        matches = re.findall(markdown_pattern, code_text)
+        if matches:
+            # Markdown detected, remove the enclosing backticks and keep the content
+            modified_code = re.sub(markdown_pattern, r'\1', code_text)
+            markdown_detected = True
+        else:
+            # No Markdown detected, return the original code
+            modified_code = code_text
+            markdown_detected = False
+        
+        return modified_code.strip(), markdown_detected
 
 if __name__ == '__main__':
 
