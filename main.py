@@ -651,7 +651,7 @@ class PDA(QWidget):
             if len(codes) < count:
                 llm = Ollama(model = "codeLlama:13b")
                 if category[count - 1].lower() == "shell":
-                    query = "Write a terminal code for the following instructions: " + str(coding[count-1]) + " . Don't explain the code or add any comments just write the code"
+                    query = "Write a terminal code for the following instructions: " + str(coding[count-1]) + " . Don't explain the code or add any comments just write the code provide command for windows only"
                 else:
                     prev_code = ""
                     for i in range(count):
@@ -692,7 +692,7 @@ class PDA(QWidget):
     
     def run_code(self, code_text_widget, code_play_button):
         llm = Ollama(model = "mistral")
-        query1 = "Remove all text that is not a code. The following text is based on markdown laguage and provided by CodeLlama. Remove all unnecesary comments along with the text at the top and bottom if present which is explaing the code. Also remove any code that won't work or isn't intended for Windows. Text: " + code_text_widget.toPlainText() + "ONLY HAVE THE CODE AS OUTPUT AND NO COMMENTS OR EXPLANATION AND MAKE NECESSARY SPACING AND ADJUSTMENTS SO THAT THE CODE CAN BE RUN LATER"
+        query1 = "The following text is based on markdown laguage and provided by CodeLlama. Remove all unnecesary comments along with the text at the top and bottom if present which is explaing the code. Also remove any code that won't work or isn't intended for Windows. If no part of the entire text contains code that is meant for windows, try to make a code that would implement the functionality in terminal (Command Prompt) Text: " + code_text_widget.toPlainText() + "\n ONLY HAVE THE CODE AS OUTPUT AND NO COMMENTS OR EXPLANATION AND MAKE NECESSARY SPACING AND ADJUSTMENTS SO THAT THE CODE CAN BE RUN LATER"
         code = ""
         for chunks in llm.stream(query1):
             code += chunks
