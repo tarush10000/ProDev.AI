@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 def modify_text(input_text):
     # Step 1: Remove unwanted characters
     modified_text = input_text.replace('[', '').replace(']', '').replace('{', '').replace('},', '\n').replace('}', '\n')
@@ -44,3 +45,14 @@ if __name__ == "__main__":
     modified_text = modify_text(input_text)
     print(modified_text)
 
+=======
+from langchain_community.llms import Ollama
+
+llm = Ollama(model = "codellama:13b")
+
+query = "given that the following code is already writen "
+
+for chunk in  llm.stream("Import the necessary PyQt5 modules: QtWidgets, QtCore, and QtGui (syntax: import sys; import QtWidgets as qw, QtCore as qc, QtGui as qg)")
+
+print(response)
+>>>>>>> 0cc99a95e35efa4e52e08ec8f299301463a3d767
