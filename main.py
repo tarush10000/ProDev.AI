@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit,QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog, QFileDialog, QTreeView
-from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread
-from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor
+from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread , QUrl
+from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor , QDesktopServices
 import sys, os
 from langchain_community.llms import Ollama
 # import lag
@@ -35,8 +35,8 @@ class Worker(QObject):
         result = ""
         for chunks in llm.stream(query):
             result += chunks
-            if chunks is not ['{', '}', '[', ']']:
-                self.update_text.emit(chunks)
+            # if chunks is not ['{', '}', '[', ']']:
+            self.update_text.emit(chunks)
             global steps
             steps = result
         self.finished.emit()
@@ -72,6 +72,7 @@ class PDA(QWidget):
         logo.setPixmap(logo_image)
         logo.setAlignment(Qt.AlignCenter)
 
+        self.currentDirectory = ''
         actual_directory_widget = QWidget()
         actual_directory_layout = QVBoxLayout()
         actual_directory_layout.setSpacing(0)
@@ -100,32 +101,36 @@ class PDA(QWidget):
         directory_folder_browse_button.clicked.connect(self.openFolder)
         directory_new_folder_image = QPixmap(resource_path('images/newfolder.png'))
         directory_new_folder_image = directory_new_folder_image.scaledToHeight(int(screen_height * 0.05))
-        directory_new_folder_button = QPushButton()
-        directory_new_folder_button.setIcon(QIcon(directory_new_folder_image))
-        directory_new_folder_button.setCursor(Qt.PointingHandCursor)
-        directory_new_folder_button.setFlat(True)
-        directory_new_folder_button.clicked.connect(self.createFolder)
+        self.directory_new_folder_button = QPushButton()
+        self.directory_new_folder_button.setIcon(QIcon(directory_new_folder_image))
+        self.directory_new_folder_button.setCursor(Qt.PointingHandCursor)
+        self.directory_new_folder_button.setFlat(True)
+        self.directory_new_folder_button.clicked.connect(self.createFolder)
         directory_new_file_image = QPixmap(resource_path('images/newfile.png'))
         directory_new_file_image = directory_new_file_image.scaledToHeight(int(screen_height * 0.05))
-        directory_new_file_button = QPushButton()
-        directory_new_file_button.setIcon(QIcon(directory_new_file_image))
-        directory_new_file_button.setCursor(Qt.PointingHandCursor)
-        directory_new_file_button.setFlat(True)
-        directory_new_file_button.clicked.connect(self.createFile)
+        self.directory_new_file_button = QPushButton()
+        self.directory_new_file_button.setIcon(QIcon(directory_new_file_image))
+        self.directory_new_file_button.setCursor(Qt.PointingHandCursor)
+        self.directory_new_file_button.setFlat(True)
+        self.directory_new_file_button.clicked.connect(self.createFile)
 
         actual_directory_heading_layout.addWidget(actual_directory_label)
         actual_directory_heading_layout.addWidget(directory_folder_browse_button)
-        actual_directory_heading_layout.addWidget(directory_new_folder_button)
-        actual_directory_heading_layout.addWidget(directory_new_file_button)     
+        actual_directory_heading_layout.addWidget(self.directory_new_folder_button)
+        actual_directory_heading_layout.addWidget(self.directory_new_file_button)     
         
-        directory_tree_view = QTreeView()
-        directory_tree_view.setStyleSheet("")
+        self.directory_tree_view = QTreeView()
+        self.directory_tree_view.setStyleSheet("")
 
         actual_directory_layout.addWidget(actual_directory_heading_widget)
-        actual_directory_layout.addWidget(directory_tree_view)
+        actual_directory_layout.addWidget(self.directory_tree_view)
 
-        model = QFileSystemModel()
-        directory_tree_view.setModel(model)
+        self.model = QFileSystemModel()
+        self.treeView = QTreeView()
+        self.directory_tree_view.setModel(self.model)
+        self.treeView.setModel(self.model)
+        self.treeView.doubleClicked.connect(self.onFileDoubleClicked)
+        self.directory_tree_view.doubleClicked.connect(self.onFileDoubleClicked)
 
         directory_layout.addWidget(logo)
         directory_layout.addWidget(actual_directory_widget)
@@ -577,8 +582,9 @@ class PDA(QWidget):
     def openFolder(self):
         directory = QFileDialog.getExistingDirectory(self, 'Select Folder')
         if directory:
-            currentDirectory = directory
+            self.currentDirectory = directory
             self.model.setRootPath(directory)
+            self.treeView.setRootIndex(self.model.index(directory))
             self.directory_tree_view.setRootIndex(self.model.index(directory))
             self.directory_new_file_button.setEnabled(True)
             self.directory_new_folder_button.setEnabled(True)
@@ -606,7 +612,13 @@ class PDA(QWidget):
                     self.show_error(str(e))
         else:
             self.show_error("Please select a folder first.")
-
+    def onFileDoubleClicked(self, index):
+        print("Double clicked")
+        # Get the file path from the model
+        filePath = self.model.filePath(index)
+        if os.path.isfile(filePath):
+            # Open the file with the default application
+            QDesktopServices.openUrl(QUrl.fromLocalFile(filePath))
     def prev_step(self, step_heading_label, code_heading_label, code_heading_widget, code_text_widget, code_description_heading_widget, code_description_text_widget):
         global count
         global codes
@@ -634,12 +646,13 @@ class PDA(QWidget):
             if len(codes) < count:
                 llm = Ollama(model = "codeLlama:13b")
                 if category[count - 1].lower() == "shell":
-                    query = "Write a terminal code for the following instructions: " + str(coding[count-1])
+                    query = "Write a terminal code for the following instructions: " + str(coding[count-1]) + " . Don't explain the code or add any comments just write the code"
                 else:
                     prev_code = ""
-                    for i in range(count) and count > 0:
-                        prev_code += codes[i]
-                    query = "Write the relevant python code for the following instructions: " + str(coding[count-1]) + " .The code written till now is: " + str(prev_code) + ". Don't exceed or make any new code not required."
+                    for i in range(count):
+                        if count > 1 :
+                            prev_code += codes[i-1]
+                    query = "Write the relevant python code for the following instructions: " + str(coding[count-1]) + " .The code written till now is: " + str(prev_code) + ". Don't exceed or make any new code not required. Append to the existing code in order to add functionality of the prompt"
                 print("1")
                 result = llm.invoke(query)
                 print(result)
