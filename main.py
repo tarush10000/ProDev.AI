@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QMessageBox, QStyle, QPlainTextEdit, QFileSystemModel, QInputDialog, QFileDialog, QTreeView, QDialog, QLineEdit
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread
-from PyQt5.QtGui import QPixmap, QIcon, QTextCursor
-=======
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit,QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog, QFileDialog, QTreeView
 from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread , QUrl
-from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor , QDesktopServices
->>>>>>> 0cc99a95e35efa4e52e08ec8f299301463a3d767
+from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor , QDesktopServices, QDialog
 import sys, os
 from langchain_community.llms import Ollama
 import re
@@ -22,8 +16,6 @@ def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
-
-from PyQt5.QtCore import QThread
 
 class Worker(QObject):
     finished = pyqtSignal()
