@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit,QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog, QFileDialog, QTreeView
 from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread , QUrl
-from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor , QDesktopServices, QDialog
+from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor , QDesktopServices
 import sys, os
 import re
 import step_generation
