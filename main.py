@@ -50,7 +50,7 @@ class PDA(QWidget):
         main_screen_widget.setLayout(layout)
 
         directory_layout = QVBoxLayout()
-        directory_layout.setAlignment(Qt.AlignVCenter)       
+        directory_layout.setAlignment(Qt.AlignVCenter)
 
         logo = QLabel()
         logo_image = QPixmap(resource_path('images/logo.png'))
