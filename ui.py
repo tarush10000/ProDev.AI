@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThre
 from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor, QDesktopServices
 import sys, os
 from demoHistory import demoData
-
+from code_generation import create_folder , generate_file_structure
 import step_generation
 
 steps = ""
@@ -17,6 +17,7 @@ codes = []
 count = 0
 max_count = 0
 query = ""
+technology = ""
 
 # Theme colors
 primary_color = "#0c0c0c"  # Dark mode background
@@ -234,18 +235,19 @@ class UI(QWidget):
 
         step_text_widget1 = QTextEdit()
         step_text_widget1.setReadOnly(True)
+        # step_text_widget1.setPlainText("In this project, we will be using the following technologies:\n\n1. Python\n2. Django\n3. HTML\n4. CSS\n5. JavaScript\n6. Bootstrap\n7. SQLite\n\nLet's get started!")
         step_text_widget1.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
 
         button_layout1 = QHBoxLayout()
-        play_button1 = QPushButton("Play")
+        # play_button1 = QPushButton("Play")
         edit_button1 = QPushButton("Edit")
 
-        play_button1.clicked.connect(lambda checked: self.run_description(1))
+        # play_button1.clicked.connect(lambda checked: self.run_description(1))
         edit_button1.clicked.connect(lambda checked: self.edit_step(1))
 
-        button_layout1.addWidget(play_button1)
+        # button_layout1.addWidget(play_button1)
         button_layout1.addWidget(edit_button1)
-
+        
         step_layout1.addWidget(step_text_widget1)
         step_layout1.addLayout(button_layout1)
 
@@ -571,7 +573,7 @@ class UI(QWidget):
         instruction_send_button.setFlat(True)
         OS = "Windows"
         # instruction_send_button.clicked.connect(lambda: print("Instruction sent" , instruction_text_widget.toPlainText()))
-        instruction_send_button.clicked.connect(lambda: self.querySubmit(instruction_text_widget.toPlainText()))
+        instruction_send_button.clicked.connect(lambda: self.querySubmit(instruction_text_widget.toPlainText() , step_text_widget1 , step_text_widget2 ,step_text_widget3))
 
         instruction_layout.addWidget(instruction_text_widget)
         instruction_layout.addWidget(instruction_send_button)
@@ -582,29 +584,42 @@ class UI(QWidget):
         guide_widget.setLayout(guide_layout)
         return guide_widget
 
-    def querySubmit(self , queryUser):
+    def querySubmit(self , queryUser , step_text_widget1 ,step_text_widget2 ,step_text_widget3):
         global query
         query = queryUser
         print(query)
-        self.create_tech_popup()
-    def create_tech_popup(self):
+        self.create_tech_popup( step_text_widget1 )
+        folder_path = create_folder(self)
+        step_text_widget2.setPlainText(folder_path)
+        global technology
+        print(technology)
+        print(query)
+        
+        folder_structure = generate_file_structure(self , query , technology)
+        step_text_widget3.setPlainText(folder_structure)
+        
+    def create_tech_popup(self , step_text_widget1):
         tech_popup = QDialog()
         tech_popup.setWindowTitle("tech_Popup")
         tech_popup_layout = QVBoxLayout()
         tech_popup_text = QLabel("What Technology do you want to use?")
         tech_popup_input = QLineEdit()
         tech_popup_button = QPushButton("Submit")
-        tech_popup_button.clicked.connect(lambda: self.submit_tech(tech_popup_input.text() , tech_popup))
+        tech_popup_button.clicked.connect(lambda: self.submit_tech(tech_popup_input.text() , tech_popup , step_text_widget1))
         tech_popup_layout.addWidget(tech_popup_text)
         tech_popup_layout.addWidget(tech_popup_input)
         tech_popup_layout.addWidget(tech_popup_button)
         tech_popup.setLayout(tech_popup_layout)
         tech_popup.exec_()
 
-    def submit_tech(self, tech , tech_popup):
+    def submit_tech(self, tech , tech_popup ,step_text_widget1):
         # Do something with the submitted tech
         print("Submitted tech:", tech)
         tech_popup.close()
+        global technology
+        technology = tech
+        step_text_widget1.setPlainText(tech)
+        
     
     
     def create_history_widget(self):
@@ -631,7 +646,7 @@ class UI(QWidget):
         
         for i in demoData :
             history_item = QPushButton(i["title"])
-            history_item.setStyleSheet("background-color: grey; margin: 0; padding: 10px; border: 0; color: white; font-size: 20px; text-align: left;")
+            history_item.setStyleSheet("background-color: grey; margin: 5px; padding: 10px; border: 0; color: white; font-size: 20px; text-align: left; border-radius: 10px;")
             history_item.clicked.connect(lambda _, i=i: print("History item clicked", i['title']))
             
             history_scroll_layout.addWidget(history_item)

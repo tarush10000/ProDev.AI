@@ -119,6 +119,7 @@ class FolderCreator(QWidget):
         self.read_me_button.setEnabled(True)
 
     def generate_file_structure(self):
+        print("Project Type:", self.project_type)  # Debugging: Print the project type
         prompt = f"Provide ONLY professional and detailed file structure for a {self.project_type} project. NO EXPLANATION."
         self.response1 = self.generate_content_with_debug(prompt, "file structure")
         self.display_content(self.response1, "File Structure")
@@ -241,3 +242,53 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
+def create_folder(self):
+    global folder_path
+    
+    # Open the file dialog to select the folder path
+    options = QFileDialog.Options()
+    options |= QFileDialog.DontUseNativeDialog
+    folder_path, _ = QFileDialog.getSaveFileName(self, "Save As", "", options=options)
+
+    if folder_path:
+        try:
+            # Create the folder
+            os.makedirs(folder_path, exist_ok=True)
+            QMessageBox.information(self, 'Success', f'Folder created at: {folder_path}')
+            return folder_path
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', f'Could not create folder: {e}')
+def generate_file_structure(self , query , tech_stack):
+    prompt = f"Provide ONLY professional and detailed file structure for a {query} project using {tech_stack}. NO EXPLANATION."
+    return generate_content_with_debug(self , prompt, "file structure")
+    
+def generate_content_with_debug(self, prompt, description):
+    max_retries = 5
+    delay = 1  # Initial delay in seconds
+    for attempt in range(max_retries):
+        try:
+            response = model.generate_content(prompt)
+            print(f"Response for {description}:", response)  # Debugging: Print the entire response object
+
+            if response.candidates and response.candidates[0].content.parts:
+                text_parts = [part.text for part in response.candidates[0].content.parts]
+                return ''.join(text_parts)
+            else:
+                QMessageBox.critical(self, 'Content Error', f'The generated {description} content is invalid or blocked.')
+                return ""
+        except InternalServerError as e:
+            print(f"Attempt {attempt + 1}/{max_retries} failed with InternalServerError. Retrying in {delay} seconds...")
+            time.sleep(delay)
+            delay *= 2  # Exponential backoff
+        except ResourceExhausted as e:
+            QMessageBox.critical(self, 'API Quota Exceeded', f'API quota has been exhausted. Please try again later.\n{e}')
+            return ""
+        except ValueError as e:
+            QMessageBox.critical(self, 'Content Error', f'Error generating {description}: {e}')
+            return ""
+    QMessageBox.critical(self, 'Content Error', f'Failed to generate {description} content after {max_retries} attempts.')
+    return ""
