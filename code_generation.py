@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import time
+import subprocess
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QFileDialog, QVBoxLayout, QMessageBox, QInputDialog, QTextEdit, QHBoxLayout
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted, InternalServerError
@@ -21,7 +22,12 @@ class FolderCreator(QWidget):
         self.project_type = None
         self.software_description = None
         self.response1 = None  # Initialize response1 here
-
+        self.commands = None  # Initialize commands here
+        self.response2 = None
+        self.response3 = None
+        self.response4 = None
+        self.response5 = None
+       
     def initUI(self):
         self.setWindowTitle('Folder Creator')
 
@@ -46,6 +52,11 @@ class FolderCreator(QWidget):
         self.commands_button.clicked.connect(self.generate_commands)
         self.commands_button.setEnabled(False)  # Initially disabled
         button_layout.addWidget(self.commands_button)
+        
+        self.run_button = QPushButton('Run', self)
+        self.run_button.clicked.connect(self.run_commands)
+        self.run_button.setEnabled(False)  # Initially disabled
+        button_layout.addWidget(self.run_button)
         
         self.strategies_button = QPushButton('Testing Strategies', self)
         self.strategies_button.clicked.connect(self.generate_strategies)
@@ -110,30 +121,31 @@ class FolderCreator(QWidget):
     def generate_explanation(self):
         if self.response1:  # Check if response1 is not None
             prompt = f"Provide a professional and detailed explanation for the following file structure of a {self.project_type} project:\n{self.response1}"
-            response2 = self.generate_content_with_debug(prompt, "explanation")
-            self.display_content(response2, "Explanation")
+            self.response2 = self.generate_content_with_debug(prompt, "explanation")
+            self.display_content(self.response2, "Explanation")
         else:
             QMessageBox.warning(self, 'Generate File Structure First', 'Please generate the file structure first.')
 
     def generate_commands(self):
         prompt = f"Provide a comprehensive list of command-line commands to set up and run a {self.project_type} project using the following directory: {folder_path}. NO EXPLANATION IN BETWEEN COMMANDS, EASIER TO COPY PASTE."
-        response = self.generate_content_with_debug(prompt, "commands")
-        self.display_content(response, "CMD Commands")
+        self.commands = self.generate_content_with_debug(prompt, "commands")
+        self.display_content(self.commands, "CMD Commands")
+        self.run_button.setEnabled(True)  # Enable the run button after generating commands
 
     def generate_strategies(self):
         prompt = f"After the development of {self.software_description} using {self.project_type}, recommend the best testing strategies."
-        response = self.generate_content_with_debug(prompt, "strategies")
-        self.display_content(response, "Testing Strategies")
+        self.response3 = self.generate_content_with_debug(prompt, "strategies")
+        self.display_content(response3, "Testing Strategies")
 
     def generate_deployment(self):
         prompt = f"After the development of {self.software_description} using {self.project_type}, recommend the best possible deployment methods."
-        response = self.generate_content_with_debug(prompt, "deployment")
-        self.display_content(response, "Deployment Methods")
+        self.response4 = self.generate_content_with_debug(prompt, "deployment")
+        self.display_content(self.response4, "Deployment Methods")
 
     def generate_read_me(self):
         prompt = f"After the development of {self.software_description} using {self.project_type}, give detailed and professional content for README file."
-        response = self.generate_content_with_debug(prompt, "read_me")
-        self.display_content(response, "README")
+        self.response5 = self.generate_content_with_debug(prompt, "read_me")
+        self.display_content(self.response5, "README")
 
     def generate_content_with_debug(self, prompt, description):
         max_retries = 5
@@ -161,6 +173,28 @@ class FolderCreator(QWidget):
                 return ""
         QMessageBox.critical(self, 'Content Error', f'Failed to generate {description} content after {max_retries} attempts.')
         return ""
+
+    def run_commands(self):
+        if not self.commands:
+            QMessageBox.warning(self, 'Generate Commands First', 'Please generate the commands first.')
+            return
+
+        # Prepare the commands to be written to a batch file
+        batch_content = self.commands.replace("<br>", "\n")
+
+        script_path = os.path.join(folder_path, "run_commands.bat")
+        try:
+            with open(script_path, "w") as file:
+                file.write(batch_content)
+            print(f"Commands to be run:\n{batch_content}")  # Debugging: Print the commands to be run
+            print(f"Batch script path: {script_path}")  # Debugging: Print the batch script path
+            # Run the batch file
+            subprocess.run(["cmd", "/c", script_path], check=True)
+            QMessageBox.information(self, 'Success', 'Commands executed successfully.')
+        except subprocess.CalledProcessError as e:
+            QMessageBox.critical(self, 'Execution Error', f'Error running commands: {e}')
+        except Exception as e:
+            QMessageBox.critical(self, 'Execution Error', f'Error: {e}')
 
     def display_content(self, content, title):
         self.text_edit.append(f"<h1 style='color:blue;'>{title}</h1>")
