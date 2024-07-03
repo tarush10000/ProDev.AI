@@ -73,6 +73,11 @@ class FolderCreator(QWidget):
         self.read_me_button.setEnabled(False)  # Initially disabled
         button_layout.addWidget(self.read_me_button)
         
+        self.save_button = QPushButton('Save', self)
+        self.save_button.clicked.connect(self.save_read_me)
+        self.save_button.setEnabled(False)  # Initially disabled
+        button_layout.addWidget(self.save_button)
+        
         layout.addLayout(button_layout)
 
         self.text_edit = QTextEdit(self)
@@ -135,7 +140,7 @@ class FolderCreator(QWidget):
     def generate_strategies(self):
         prompt = f"After the development of {self.software_description} using {self.project_type}, recommend the best testing strategies."
         self.response3 = self.generate_content_with_debug(prompt, "strategies")
-        self.display_content(response3, "Testing Strategies")
+        self.display_content(self.response3, "Testing Strategies")
 
     def generate_deployment(self):
         prompt = f"After the development of {self.software_description} using {self.project_type}, recommend the best possible deployment methods."
@@ -146,6 +151,7 @@ class FolderCreator(QWidget):
         prompt = f"After the development of {self.software_description} using {self.project_type}, give detailed and professional content for README file."
         self.response5 = self.generate_content_with_debug(prompt, "read_me")
         self.display_content(self.response5, "README")
+        self.save_button.setEnabled(True)  # Enable the save button after generating README
 
     def generate_content_with_debug(self, prompt, description):
         max_retries = 5
@@ -195,6 +201,19 @@ class FolderCreator(QWidget):
             QMessageBox.critical(self, 'Execution Error', f'Error running commands: {e}')
         except Exception as e:
             QMessageBox.critical(self, 'Execution Error', f'Error: {e}')
+
+    def save_read_me(self):
+        if self.response5:
+            read_me_path = os.path.join(folder_path, "README.md")
+            try:
+                with open(read_me_path, "w", encoding="utf-8") as file:
+                    file.write(self.response5)
+                QMessageBox.information(self, 'Success', 'README.md file saved successfully.')
+            except Exception as e:
+                QMessageBox.critical(self, 'Save Error', f'Could not save README.md file: {e}')
+        else:
+            QMessageBox.warning(self, 'Generate README First', 'Please generate the README content first.')
+
 
     def display_content(self, content, title):
         self.text_edit.append(f"<h1 style='color:blue;'>{title}</h1>")
