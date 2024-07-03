@@ -125,7 +125,7 @@ class FolderCreator(QWidget):
 
     def generate_explanation(self):
         if self.response1:  # Check if response1 is not None
-            prompt = f"Provide a professional and detailed explanation for the following file structure of a {self.project_type} project:\n{self.response1}"
+            prompt = f"Provide a professional and detailed explanation for the following file structure of a {self.project_type} project:\n{self.response1}."
             self.response2 = self.generate_content_with_debug(prompt, "explanation")
             self.display_content(self.response2, "Explanation")
         else:
@@ -148,10 +148,11 @@ class FolderCreator(QWidget):
         self.display_content(self.response4, "Deployment Methods")
 
     def generate_read_me(self):
-        prompt = f"After the development of {self.software_description} using {self.project_type}, give detailed and professional content for README file."
+        prompt = f"After the development of {self.software_description} using {self.project_type}, give detailed and professional content for README file. For example, in a Python project, include sections for installation, usage, and contributing guidelines. In a C++ project, include sections for building, running, and testing the application."
         self.response5 = self.generate_content_with_debug(prompt, "read_me")
         self.display_content(self.response5, "README")
         self.save_button.setEnabled(True)  # Enable the save button after generating README
+
 
     def generate_content_with_debug(self, prompt, description):
         max_retries = 5
