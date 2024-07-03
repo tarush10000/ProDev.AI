@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit, 
                             QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, 
                             QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, 
-                            QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog, 
-                            QFileDialog, QTreeView, QStackedWidget, QRadioButton, QButtonGroup)
+                            QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog,QToolBox, QGroupBox, QTextEdit, 
+                            QFileDialog, QFrame, QTreeView, QStackedWidget, QRadioButton, QButtonGroup)
 from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread, QUrl
 from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor, QDesktopServices
 import sys, os
@@ -67,9 +67,12 @@ class UI(QWidget):
         logo.setPixmap(logo_image)
         logo.setAlignment(Qt.AlignCenter)
 
-        navbar_layout = QHBoxLayout()
-        navbar_layout.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
-        navbar_layout.setSpacing(20)
+        navbar_container = QFrame()
+        navbar_container.setFixedWidth(int(screen_width * 0.8))
+
+        navbar_layout = QHBoxLayout(navbar_container)
+        navbar_layout.setAlignment(Qt.AlignCenter)
+        navbar_layout.setSpacing(160)
 
         # Navbar items
         guide_label = QLabel("Guide")
@@ -84,13 +87,14 @@ class UI(QWidget):
         # Style for navbar items
         nav_item_style = f"""
         QLabel {{
-            color: {secondary_color};
+            color: #888888;
             font-size: 18px;
         }}
         QLabel:hover {{
-            text-decoration: underline;
+            color: {secondary_color};
         }}
         QLabel:focus {{
+            color: {secondary_color};
             text-decoration: underline;
         }}
         QLabel:pressed {{
@@ -107,7 +111,7 @@ class UI(QWidget):
         navbar_layout.addWidget(settings_label)
 
         header_layout.addWidget(logo)
-        header_layout.addLayout(navbar_layout)
+        header_layout.addWidget(navbar_container)
 
         main_layout.addWidget(header_widget)
         
@@ -136,6 +140,7 @@ class UI(QWidget):
         history_label.mousePressEvent = lambda event: self.stacked_widget.setCurrentIndex(1)
         settings_label.mousePressEvent = lambda event: self.stacked_widget.setCurrentIndex(2)
 
+
     def create_guide_widget(self, screen_height, screen_width):
         guide_widget = QWidget()
         guide_layout = QVBoxLayout()
@@ -149,52 +154,250 @@ class UI(QWidget):
         step_area_widget = QWidget()
         step_area_widget.setLayout(step_area_layout)
         step_area_widget.setStyleSheet("padding: 10px;")
-        step_area_widget.setFixedHeight(int(screen_height * 0.8))
-        step_area_widget.setFixedWidth(int(screen_width * 0.8))
+        step_area_widget.setFixedHeight(int(screen_height * 0.75))
+        step_area_widget.setFixedWidth(int(screen_width * 0.94))
+
+        # step_layout = QVBoxLayout()
+        # step_layout.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
+        # step_widget = QWidget()
+        # step_widget.setLayout(step_layout)
+        # step_widget.setStyleSheet("padding: 10px;  border: 1px solid rgb(255,255,255); border-radius: 20px")
+        # step_edit_play_layout = QHBoxLayout()
+        # step_edit_play_layout.setAlignment(Qt.AlignRight)
+        # step_edit_play_widget = QWidget()
+        # step_edit_play_widget.setLayout(step_edit_play_layout)
+        # step_edit_play_widget.setStyleSheet("padding: 10px; border: 0px;")
+        # step_edit_button = QPushButton()
+        # step_edit_image = QPixmap(resource_path('images/edit.png'))
+        # step_edit_image = step_edit_image.scaledToHeight(int(screen_height * 0.05))
+        # step_edit_button.setIcon(QIcon(step_edit_image))
+        # step_edit_button.setCursor(Qt.PointingHandCursor)
+        # step_edit_button.setFlat(True)
+        # step_edit_button.clicked.connect(lambda: self.edit_steps(step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button))
+        # step_save_button = QPushButton()
+        # step_save_image = QPixmap(resource_path('images/save.png'))
+        # step_save_image = step_save_image.scaledToHeight(int(screen_height * 0.05))
+        # step_save_button.setIcon(QIcon(step_save_image))
+        # step_save_button.setCursor(Qt.PointingHandCursor)
+        # step_save_button.setFlat(True)
+        # step_save_button.setVisible(False)
+        # step_save_button.clicked.connect(lambda: self.save_edit_steps(step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button))
+        # step_play_button = QPushButton()
+        # step_play_image = QPixmap(resource_path('images/play.png'))
+        # step_play_image = step_play_image.scaledToHeight(int(screen_height * 0.05))
+        # step_play_button.setIcon(QIcon(step_play_image))
+        # step_play_button.setCursor(Qt.PointingHandCursor)
+        # step_play_button.setFlat(True)
+        # step_play_button.clicked.connect(lambda: self.run_description(step_description_widget, step_play_button, step_prev_button, step_next_button, step_heading_label, step_text_widget))
+        
+        # step_edit_play_layout.addWidget(step_edit_button)
+        # step_edit_play_layout.addWidget(step_save_button)
+        # step_edit_play_layout.addWidget(step_play_button)
+
+        # step_text_widget = QPlainTextEdit()
+        # step_text_widget.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 23px")
+        # step_text_widget.setFixedWidth(int(screen_width * 0.5))
+        # step_text_widget.setReadOnly(True)
+        # step_layout.addWidget(step_edit_play_widget)
+        # step_layout.addWidget(step_text_widget)
 
         step_layout = QVBoxLayout()
         step_layout.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
         step_widget = QWidget()
         step_widget.setLayout(step_layout)
         step_widget.setStyleSheet("padding: 10px;  border: 1px solid rgb(255,255,255); border-radius: 20px")
-        step_edit_play_layout = QHBoxLayout()
-        step_edit_play_layout.setAlignment(Qt.AlignRight)
-        step_edit_play_widget = QWidget()
-        step_edit_play_widget.setLayout(step_edit_play_layout)
-        step_edit_play_widget.setStyleSheet("padding: 10px; border: 0px;")
-        step_edit_button = QPushButton()
-        step_edit_image = QPixmap(resource_path('images/edit.png'))
-        step_edit_image = step_edit_image.scaledToHeight(int(screen_height * 0.05))
-        step_edit_button.setIcon(QIcon(step_edit_image))
-        step_edit_button.setCursor(Qt.PointingHandCursor)
-        step_edit_button.setFlat(True)
-        step_edit_button.clicked.connect(lambda: self.edit_steps(step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button))
-        step_save_button = QPushButton()
-        step_save_image = QPixmap(resource_path('images/save.png'))
-        step_save_image = step_save_image.scaledToHeight(int(screen_height * 0.05))
-        step_save_button.setIcon(QIcon(step_save_image))
-        step_save_button.setCursor(Qt.PointingHandCursor)
-        step_save_button.setFlat(True)
-        step_save_button.setVisible(False)
-        step_save_button.clicked.connect(lambda: self.save_edit_steps(step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button))
-        step_play_button = QPushButton()
-        step_play_image = QPixmap(resource_path('images/play.png'))
-        step_play_image = step_play_image.scaledToHeight(int(screen_height * 0.05))
-        step_play_button.setIcon(QIcon(step_play_image))
-        step_play_button.setCursor(Qt.PointingHandCursor)
-        step_play_button.setFlat(True)
-        step_play_button.clicked.connect(lambda: self.run_description(step_description_widget, step_play_button, step_prev_button, step_next_button, step_heading_label, step_text_widget))
-        
-        step_edit_play_layout.addWidget(step_edit_button)
-        step_edit_play_layout.addWidget(step_save_button)
-        step_edit_play_layout.addWidget(step_play_button)
 
-        step_text_widget = QPlainTextEdit()
-        step_text_widget.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 23px")
-        step_text_widget.setFixedWidth(int(screen_width * 0.37))
-        step_text_widget.setReadOnly(True)
-        step_layout.addWidget(step_edit_play_widget)
-        step_layout.addWidget(step_text_widget)
+        step_toolbox_layout = QVBoxLayout()
+        step_toolbox_layout.setAlignment(Qt.AlignTop)
+        step_toolbox_layout.setContentsMargins(0, 0, 0, 0)
+        step_toolbox_widget = QWidget()
+        step_toolbox_widget.setLayout(step_toolbox_layout)
+        step_toolbox_widget.setStyleSheet("padding: 10px; border: 1px solid rgb(255,255,255); border-radius: 20px")
+
+        step_toolbox = QToolBox()
+        step_toolbox.setStyleSheet("""
+                                        QToolBox::tab {
+                                            padding: 30px;
+                                            background: rgb(50,50,50);
+                                            color: white;
+                                            border: 0px;
+                                            font-size: 20px;
+                                            border-radius: 20px;
+                                        }
+                                    """)
+
+        # Step 1
+        step_group1 = QGroupBox()
+        step_layout1 = QVBoxLayout()
+
+        step_text_widget1 = QTextEdit()
+        step_text_widget1.setReadOnly(True)
+        step_text_widget1.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
+
+        button_layout1 = QHBoxLayout()
+        play_button1 = QPushButton("Play")
+        edit_button1 = QPushButton("Edit")
+
+        play_button1.clicked.connect(lambda checked: self.run_description(1))
+        edit_button1.clicked.connect(lambda checked: self.edit_step(1))
+
+        button_layout1.addWidget(play_button1)
+        button_layout1.addWidget(edit_button1)
+
+        step_layout1.addWidget(step_text_widget1)
+        step_layout1.addLayout(button_layout1)
+
+        step_group1.setLayout(step_layout1)
+        step_toolbox.addItem(step_group1, "Step 1: Technology to be used")
+
+        # Step 2
+        step_group2 = QGroupBox()
+        step_layout2 = QVBoxLayout()
+
+        step_text_widget2 = QTextEdit()
+        step_text_widget2.setReadOnly(True)
+        step_text_widget2.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
+
+        button_layout2 = QHBoxLayout()
+        play_button2 = QPushButton("Play")
+        edit_button2 = QPushButton("Edit")
+
+        play_button2.clicked.connect(lambda checked: self.run_description(2))
+        edit_button2.clicked.connect(lambda checked: self.edit_step(2))
+
+        button_layout2.addWidget(play_button2)
+        button_layout2.addWidget(edit_button2)
+
+        step_layout2.addWidget(step_text_widget2)
+        step_layout2.addLayout(button_layout2)
+
+        step_group2.setLayout(step_layout2)
+        step_toolbox.addItem(step_group2, "Step 2: Choose Location of project")
+
+        # Step 3
+        step_group3 = QGroupBox()
+        step_layout3 = QVBoxLayout()
+
+        step_text_widget3 = QTextEdit()
+        step_text_widget3.setReadOnly(True)
+        step_text_widget3.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
+
+        button_layout3 = QHBoxLayout()
+        play_button3 = QPushButton("Play")
+        edit_button3 = QPushButton("Edit")
+
+        play_button3.clicked.connect(lambda checked: self.run_description(3))
+        edit_button3.clicked.connect(lambda checked: self.edit_step(3))
+
+        button_layout3.addWidget(play_button3)
+        button_layout3.addWidget(edit_button3)
+
+        step_layout3.addWidget(step_text_widget3)
+        step_layout3.addLayout(button_layout3)
+
+        step_group3.setLayout(step_layout3)
+        step_toolbox.addItem(step_group3, "Step 3: Create file / folder structure")
+
+        # Step 4
+        step_group4 = QGroupBox()
+        step_layout4 = QVBoxLayout()
+
+        step_text_widget4 = QTextEdit()
+        step_text_widget4.setReadOnly(True)
+        step_text_widget4.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
+
+        button_layout4 = QHBoxLayout()
+        play_button4 = QPushButton("Play")
+        edit_button4 = QPushButton("Edit")
+
+        play_button4.clicked.connect(lambda checked: self.run_description(4))
+        edit_button4.clicked.connect(lambda checked: self.edit_step(4))
+
+        button_layout4.addWidget(play_button4)
+        button_layout4.addWidget(edit_button4)
+
+        step_layout4.addWidget(step_text_widget4)
+        step_layout4.addLayout(button_layout4)
+
+        step_group4.setLayout(step_layout4)
+        step_toolbox.addItem(step_group4, "Step 4: Implementation")
+
+        # Step 5
+        step_group5 = QGroupBox()
+        step_layout5 = QVBoxLayout()
+
+        step_text_widget5 = QTextEdit()
+        step_text_widget5.setReadOnly(True)
+        step_text_widget5.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
+
+        button_layout5 = QHBoxLayout()
+        play_button5 = QPushButton("Play")
+        edit_button5 = QPushButton("Edit")
+
+        play_button5.clicked.connect(lambda checked: self.run_description(5))
+        edit_button5.clicked.connect(lambda checked: self.edit_step(5))
+
+        button_layout5.addWidget(play_button5)
+        button_layout5.addWidget(edit_button5)
+
+        step_layout5.addWidget(step_text_widget5)
+        step_layout5.addLayout(button_layout5)
+
+        step_group5.setLayout(step_layout5)
+        step_toolbox.addItem(step_group5, "Step 5: Testing")
+
+        # Step 6
+        step_group6 = QGroupBox()
+        step_layout6 = QVBoxLayout()
+
+        step_text_widget6 = QTextEdit()
+        step_text_widget6.setReadOnly(True)
+        step_text_widget6.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
+
+        button_layout6 = QHBoxLayout()
+        play_button6 = QPushButton("Play")
+        edit_button6 = QPushButton("Edit")
+
+        play_button6.clicked.connect(lambda checked: self.run_description(6))
+        edit_button6.clicked.connect(lambda checked: self.edit_step(6))
+
+        button_layout6.addWidget(play_button6)
+        button_layout6.addWidget(edit_button6)
+
+        step_layout6.addWidget(step_text_widget6)
+        step_layout6.addLayout(button_layout6)
+
+        step_group6.setLayout(step_layout6)
+        step_toolbox.addItem(step_group6, "Step 6: Deployment")
+
+        # Step 7
+        step_group7 = QGroupBox()
+        step_layout7 = QVBoxLayout()
+
+        step_text_widget7 = QTextEdit()
+        step_text_widget7.setReadOnly(True)
+        step_text_widget7.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
+
+        button_layout7 = QHBoxLayout()
+        play_button7 = QPushButton("Play")
+        edit_button7 = QPushButton("Edit")
+
+        play_button7.clicked.connect(lambda checked: self.run_description(7))
+        edit_button7.clicked.connect(lambda checked: self.edit_step(7))
+
+        button_layout7.addWidget(play_button7)
+        button_layout7.addWidget(edit_button7)
+
+        step_layout7.addWidget(step_text_widget7)
+        step_layout7.addLayout(button_layout7)
+
+        step_group7.setLayout(step_layout7)
+        step_toolbox.addItem(step_group7, "Step 7: Documentation")
+
+        step_toolbox_layout.addWidget(step_toolbox)
+        step_area_layout.addWidget(step_toolbox_widget)
+
+
 
         step_description_layout = QVBoxLayout()
         step_description_layout.setContentsMargins(0, 0, 0, 0)
@@ -236,7 +439,7 @@ class UI(QWidget):
         step_description_heading_layout.addWidget(step_next_button)
 
         step_description_content_layout = QVBoxLayout()
-        step_description_content_layout.setSpacing(30)  
+        step_description_content_layout.setSpacing(30)
         step_description_content_widget = QWidget()
         step_description_content_widget.setLayout(step_description_content_layout)
         step_description_content_widget.setStyleSheet("background-color: rgb(50,50,50);padding: 10px; border: 0px")
@@ -301,7 +504,7 @@ class UI(QWidget):
         code_text_widget = QPlainTextEdit()
         code_text_widget.setStyleSheet("color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 20px; font: Montserrat; border-top-left-radius: 0px; border-top-right-radius: 0px; border: 0px;")
         code_text_widget.setLayout(code_text_layout) 
-        code_text_widget.setReadOnly(True)       
+        code_text_widget.setReadOnly(True)
 
         code_layout.addWidget(code_heading_widget)  
         code_layout.addWidget(code_text_widget)
@@ -348,7 +551,7 @@ class UI(QWidget):
         step_description_layout.addWidget(step_description_heading_widget)
         step_description_layout.addWidget(step_description_content_widget)
 
-        step_area_layout.addWidget(step_widget)
+        # step_area_layout.addWidget(step_widget)
         step_area_layout.addWidget(step_description_widget)
 
         instruction_layout = QHBoxLayout()
@@ -357,6 +560,7 @@ class UI(QWidget):
         instruction_text_widget = QPlainTextEdit()
         instruction_text_widget.setStyleSheet("border-radius : 20px; color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 2px solid rgb(255,255,255);")
         instruction_text_widget.setFixedHeight(int(screen_height * 0.07))
+        # instruction_text_widget.setFixedWidth(int(screen_width * 0.9))
         instruction_send_button = QPushButton()
         instruction_send_image = QPixmap(resource_path('images/play.png'))
         instruction_send_image = instruction_send_image.scaledToHeight(int(screen_height * 0.05))
@@ -364,7 +568,7 @@ class UI(QWidget):
         instruction_send_button.setCursor(Qt.PointingHandCursor)
         instruction_send_button.setFlat(True)
         OS = "Windows"
-        instruction_send_button.clicked.connect(lambda: self.run_query(instruction_text_widget.toPlainText(), step_text_widget, OS, instruction_send_button))
+        # instruction_send_button.clicked.connect(lambda: self.run_query(instruction_text_widget.toPlainText(), step_text_widget, OS, instruction_send_button))
 
         instruction_layout.addWidget(instruction_text_widget)
         instruction_layout.addWidget(instruction_send_button)
