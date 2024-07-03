@@ -2,10 +2,11 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QApplica
                             QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, 
                             QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, 
                             QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog,QToolBox, QGroupBox, QTextEdit, 
-                            QFileDialog, QFrame, QTreeView, QStackedWidget, QRadioButton, QButtonGroup)
+                            QFileDialog, QFrame, QTreeView, QStackedWidget, QRadioButton, QButtonGroup , QDialog)
 from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread, QUrl
 from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor, QDesktopServices
 import sys, os
+from demoHistory import demoData
 
 import step_generation
 
@@ -15,6 +16,7 @@ coding = []
 codes = []
 count = 0
 max_count = 0
+query = ""
 
 # Theme colors
 primary_color = "#0c0c0c"  # Dark mode background
@@ -568,7 +570,8 @@ class UI(QWidget):
         instruction_send_button.setCursor(Qt.PointingHandCursor)
         instruction_send_button.setFlat(True)
         OS = "Windows"
-        # instruction_send_button.clicked.connect(lambda: self.run_query(instruction_text_widget.toPlainText(), step_text_widget, OS, instruction_send_button))
+        # instruction_send_button.clicked.connect(lambda: print("Instruction sent" , instruction_text_widget.toPlainText()))
+        instruction_send_button.clicked.connect(lambda: self.querySubmit(instruction_text_widget.toPlainText()))
 
         instruction_layout.addWidget(instruction_text_widget)
         instruction_layout.addWidget(instruction_send_button)
@@ -579,6 +582,31 @@ class UI(QWidget):
         guide_widget.setLayout(guide_layout)
         return guide_widget
 
+    def querySubmit(self , queryUser):
+        global query
+        query = queryUser
+        print(query)
+        self.create_tech_popup()
+    def create_tech_popup(self):
+        tech_popup = QDialog()
+        tech_popup.setWindowTitle("tech_Popup")
+        tech_popup_layout = QVBoxLayout()
+        tech_popup_text = QLabel("What Technology do you want to use?")
+        tech_popup_input = QLineEdit()
+        tech_popup_button = QPushButton("Submit")
+        tech_popup_button.clicked.connect(lambda: self.submit_tech(tech_popup_input.text() , tech_popup))
+        tech_popup_layout.addWidget(tech_popup_text)
+        tech_popup_layout.addWidget(tech_popup_input)
+        tech_popup_layout.addWidget(tech_popup_button)
+        tech_popup.setLayout(tech_popup_layout)
+        tech_popup.exec_()
+
+    def submit_tech(self, tech , tech_popup):
+        # Do something with the submitted tech
+        print("Submitted tech:", tech)
+        tech_popup.close()
+    
+    
     def create_history_widget(self):
         history_widget = QWidget()
         history_layout = QVBoxLayout()
@@ -594,9 +622,23 @@ class UI(QWidget):
         # History content (placeholder)
         history_content = QLabel("History Content")
         history_content.setAlignment(Qt.AlignCenter)
-
         history_layout.addLayout(search_layout)
-        history_layout.addWidget(history_content)
+        history_scroll_area = QScrollArea()
+        history_scroll_area.setWidgetResizable(True)
+        history_scroll_widget = QWidget()
+        history_scroll_layout = QVBoxLayout(history_scroll_widget)
+        history_scroll_area.setWidget(history_scroll_widget)
+        
+        for i in demoData :
+            history_item = QPushButton(i["title"])
+            history_item.setStyleSheet("background-color: grey; margin: 0; padding: 10px; border: 0; color: white; font-size: 20px; text-align: left;")
+            history_item.clicked.connect(lambda _, i=i: print("History item clicked", i['title']))
+            
+            history_scroll_layout.addWidget(history_item)
+            
+        history_layout.addWidget(history_scroll_area)
+
+        # history_layout.addWidget(history_content)
 
         history_widget.setLayout(history_layout)
         return history_widget
