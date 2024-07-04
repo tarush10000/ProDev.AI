@@ -6,7 +6,6 @@ import subprocess
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QFileDialog, QVBoxLayout, QMessageBox, QInputDialog, QTextEdit, QHBoxLayout
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted, InternalServerError
-
 # Ensure the API key is set
 genai.configure(api_key=os.getenv("Gemini_API"))
 
@@ -304,8 +303,9 @@ def generate_deployment(self, query , technology):
 
 def generate_read_me(self, query , technology):
     prompt = f"After the development of {query} using {technology}, give detailed and professional content for README file. For example, in a Python project, include sections for installation, usage, and contributing guidelines. In a C++ project, include sections for building, running, and testing the application."
-    data = clean_response(self ,generate_content_with_debug(self , prompt, "read_me"))
-    return  f"<div>{data}</div>"
+    data = generate_content_with_debug(self , prompt, "read_me")
+    cleanData = clean_response(self , data)
+    return  f"<div>{cleanData}</div>" , data
 
 def clean_response(self, text):
     # Convert text between asterisks to bold using HTML <b> tags
@@ -318,3 +318,17 @@ def clean_response(self, text):
     # Remove '##' and make the following text bold
     text = re.sub(r'##\s*(.*?)<br>', r'<b>\1</b><br>', text)
     return text
+
+def save_read_me(self , folder_path , data):
+    if data:
+        read_me_path = os.path.join(folder_path, "README.md")
+        try:
+            print("folder_path" , folder_path)
+            print(folder_path , read_me_path)
+            with open(read_me_path, "w", encoding="utf-8") as file:
+                file.write(data)
+            QMessageBox.information(self, 'Success', 'README.md file saved successfully.')
+        except Exception as e:
+            QMessageBox.critical(self, 'Save Error', f'Could not save README.md file: {e}')
+    else:
+        QMessageBox.warning(self, 'Generate README First', 'Please generate the README content first.')

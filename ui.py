@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap, QIcon
 import sys, os, re
 from demoHistory import demoData
-from code_generation import create_folder , generate_file_structure , generate_strategies , generate_deployment , generate_read_me
+from code_generation import create_folder , generate_file_structure , generate_strategies , generate_deployment , generate_read_me , save_read_me
 import google.generativeai as genai
 from edge_tts import Communicate
 import tempfile
@@ -19,8 +19,9 @@ folder_path = ""
 folder_structure = ""
 implementation = ""
 testing = ""
-documentation = ""
 deployment = ""
+documentation = ""
+documentationMd = ""
 
 # Theme colors
 primary_color = "#0c0c0c"  # Dark mode background
@@ -418,13 +419,13 @@ class UI(QWidget):
         step_text_widget7.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
 
         button_layout7 = QHBoxLayout()
-        # play_button7 = QPushButton("Play")
         edit_button7 = QPushButton("Generate")
-
-        # play_button7.clicked.connect(lambda checked: self.run_description(7))
+        play_button7 = QPushButton("Save ReadMe")
+        global folder_path
+        play_button7.clicked.connect(lambda: save_read_me(self, folder_path, documentationMd))
         edit_button7.clicked.connect(lambda : self.save_docs(step_text_widget7))
 
-        # button_layout7.addWidget(play_button7)
+        button_layout7.addWidget(play_button7)
         button_layout7.addWidget(edit_button7)
 
         step_layout7.addWidget(step_text_widget7)
@@ -617,6 +618,7 @@ class UI(QWidget):
         global folder_path
         folder_path = create_folder(self)
         step_text_widget2.setPlainText(folder_path)
+        print("folderpath function" , folder_path)
         
     def save_file_structure(self , step_text_widget3):
         global folder_structure
@@ -632,9 +634,15 @@ class UI(QWidget):
         deployment = generate_deployment(self , query , technology)
         print(deployment)
         step_text_widget6.append(deployment)
+        global folder_path
+        print(folder_path)
     def save_docs(self , step_text_widget7):
-        read_me = generate_read_me(self , query , technology)
+        read_me , read_meMD = generate_read_me(self , query , technology)
+        global documentationMd
+        documentationMd = read_meMD
         print(read_me)
+        global documentation
+        documentation = read_me
         step_text_widget7.append(read_me)
         
     def create_tech_popup(self , step_text_widget1):
