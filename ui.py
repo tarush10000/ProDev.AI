@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap, QIcon
 import sys, os, re
 from demoHistory import demoData
-from code_generation import create_folder , generate_file_structure
+from code_generation import create_folder , generate_file_structure , generate_strategies , generate_deployment , generate_read_me
 import google.generativeai as genai
 from edge_tts import Communicate
 import tempfile
@@ -15,6 +15,8 @@ import emoji
 
 query = ""
 technology = ""
+folder_path = ""
+folder_structure = ""
 
 # Theme colors
 primary_color = "#0c0c0c"  # Dark mode background
@@ -262,7 +264,7 @@ class UI(QWidget):
         edit_button1 = QPushButton("Edit")
 
         # play_button1.clicked.connect(lambda checked: self.run_description(1))
-        edit_button1.clicked.connect(lambda checked: self.edit_step(1))
+        edit_button1.clicked.connect(lambda checked: self.create_tech_popup(step_text_widget1))
 
         # button_layout1.addWidget(play_button1)
         button_layout1.addWidget(edit_button1)
@@ -282,13 +284,12 @@ class UI(QWidget):
         step_text_widget2.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
 
         button_layout2 = QHBoxLayout()
-        play_button2 = QPushButton("Play")
-        edit_button2 = QPushButton("Edit")
+        # play_button2 = QPushButton("Play")
+        edit_button2 = QPushButton("select")
+        # play_button2.clicked.connect(lambda checked: self.run_description(2))
+        edit_button2.clicked.connect(lambda : self.save_folder_path(step_text_widget2))
 
-        play_button2.clicked.connect(lambda checked: self.run_description(2))
-        edit_button2.clicked.connect(lambda checked: self.edit_step(2))
-
-        button_layout2.addWidget(play_button2)
+        # button_layout2.addWidget(play_button2)
         button_layout2.addWidget(edit_button2)
 
         step_layout2.addWidget(step_text_widget2)
@@ -306,13 +307,13 @@ class UI(QWidget):
         step_text_widget3.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
 
         button_layout3 = QHBoxLayout()
-        play_button3 = QPushButton("Play")
-        edit_button3 = QPushButton("Edit")
+        # play_button3 = QPushButton("Play")
+        edit_button3 = QPushButton("Generate")
 
-        play_button3.clicked.connect(lambda checked: self.run_description(3))
-        edit_button3.clicked.connect(lambda checked: self.edit_step(3))
+        # play_button3.clicked.connect(lambda checked: self.run_description(3))
+        edit_button3.clicked.connect(lambda : self.save_file_structure(step_text_widget3))
 
-        button_layout3.addWidget(play_button3)
+        # button_layout3.addWidget(play_button3)
         button_layout3.addWidget(edit_button3)
 
         step_layout3.addWidget(step_text_widget3)
@@ -354,13 +355,13 @@ class UI(QWidget):
         step_text_widget5.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
 
         button_layout5 = QHBoxLayout()
-        play_button5 = QPushButton("Play")
-        edit_button5 = QPushButton("Edit")
+        # play_button5 = QPushButton("Play")
+        edit_button5 = QPushButton("Generate")
 
-        play_button5.clicked.connect(lambda checked: self.run_description(5))
-        edit_button5.clicked.connect(lambda checked: self.edit_step(5))
+        # play_button5.clicked.connect(lambda checked: self.run_description(5))
+        edit_button5.clicked.connect(lambda : self.save_tests(step_text_widget5) )
 
-        button_layout5.addWidget(play_button5)
+        # button_layout5.addWidget(play_button5)
         button_layout5.addWidget(edit_button5)
 
         step_layout5.addWidget(step_text_widget5)
@@ -378,13 +379,13 @@ class UI(QWidget):
         step_text_widget6.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
 
         button_layout6 = QHBoxLayout()
-        play_button6 = QPushButton("Play")
-        edit_button6 = QPushButton("Edit")
+        # play_button6 = QPushButton("Play")
+        edit_button6 = QPushButton("Generate")
 
-        play_button6.clicked.connect(lambda checked: self.run_description(6))
-        edit_button6.clicked.connect(lambda checked: self.edit_step(6))
+        # play_button6.clicked.connect(lambda checked: self.run_description(6))
+        edit_button6.clicked.connect(lambda : self.save_deployment(step_text_widget6))
 
-        button_layout6.addWidget(play_button6)
+        # button_layout6.addWidget(play_button6)
         button_layout6.addWidget(edit_button6)
 
         step_layout6.addWidget(step_text_widget6)
@@ -402,13 +403,13 @@ class UI(QWidget):
         step_text_widget7.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
 
         button_layout7 = QHBoxLayout()
-        play_button7 = QPushButton("Play")
-        edit_button7 = QPushButton("Edit")
+        # play_button7 = QPushButton("Play")
+        edit_button7 = QPushButton("Generate")
 
-        play_button7.clicked.connect(lambda checked: self.run_description(7))
-        edit_button7.clicked.connect(lambda checked: self.edit_step(7))
+        # play_button7.clicked.connect(lambda checked: self.run_description(7))
+        edit_button7.clicked.connect(lambda : self.save_docs(step_text_widget7))
 
-        button_layout7.addWidget(play_button7)
+        # button_layout7.addWidget(play_button7)
         button_layout7.addWidget(edit_button7)
 
         step_layout7.addWidget(step_text_widget7)
@@ -419,7 +420,15 @@ class UI(QWidget):
 
         step_toolbox_layout.addWidget(step_toolbox)
         step_area_layout.addWidget(step_toolbox_widget)
-
+        
+        
+        self.step_text_widget1 = step_text_widget1
+        self.step_text_widget2 = step_text_widget2
+        self.step_text_widget3 = step_text_widget3
+        self.step_text_widget4 = step_text_widget4
+        self.step_text_widget5 = step_text_widget5
+        self.step_text_widget6 = step_text_widget6
+        self.step_text_widget7 = step_text_widget7
 
 
         step_description_layout = QVBoxLayout()
@@ -519,7 +528,7 @@ class UI(QWidget):
         instruction_send_button.setFlat(True)
         OS = "Windows"
         # instruction_send_button.clicked.connect(lambda: print("Instruction sent" , instruction_text_widget.toPlainText()))
-        instruction_send_button.clicked.connect(lambda: self.querySubmit(instruction_text_widget.toPlainText() , step_text_widget1 , step_text_widget2 ,step_text_widget3))
+        instruction_send_button.clicked.connect(lambda: self.querySubmit(instruction_text_widget.toPlainText() , step_text_widget1 , step_text_widget2 ,step_text_widget3,step_text_widget5))
 
         instruction_layout.addWidget(instruction_text_widget)
         instruction_layout.addWidget(instruction_send_button)
@@ -530,19 +539,45 @@ class UI(QWidget):
         guide_widget.setLayout(guide_layout)
         return guide_widget
 
-    def querySubmit(self , queryUser , step_text_widget1 ,step_text_widget2 ,step_text_widget3):
+    def querySubmit(self , queryUser , step_text_widget1 ,step_text_widget2 ,step_text_widget3 , step_text_widget5):
         global query
         query = queryUser
         print(query)
-        self.create_tech_popup( step_text_widget1 )
+        # self.create_tech_popup( step_text_widget1 )
+        # folder_path = create_folder(self)
+        # step_text_widget2.setPlainText(folder_path)
+        # global technology
+        # print(technology)
+        # print(query)
+        
+        # folder_structure = generate_file_structure(self , query , technology)
+        # step_text_widget3.setPlainText(folder_structure)
+        # testingStrategy = generate_strategies(self , query , technology)
+        # print(testingStrategy)
+        # step_text_widget5.append(testingStrategy)
+        
+    def save_folder_path(self ,  step_text_widget2):
+        global folder_path
         folder_path = create_folder(self)
         step_text_widget2.setPlainText(folder_path)
-        global technology
-        print(technology)
-        print(query)
         
+    def save_file_structure(self , step_text_widget3):
+        global folder_structure
         folder_structure = generate_file_structure(self , query , technology)
         step_text_widget3.setPlainText(folder_structure)
+    def save_tests(self , step_text_widget5):
+        testingStrategy = generate_strategies(self , query , technology)
+        print(testingStrategy)
+        step_text_widget5.append(testingStrategy)
+    
+    def save_deployment(self , step_text_widget6):
+        deployment = generate_deployment(self , query , technology)
+        print(deployment)
+        step_text_widget6.append(deployment)
+    def save_docs(self , step_text_widget7):
+        read_me = generate_read_me(self , query , technology)
+        print(read_me)
+        step_text_widget7.append(read_me)
         
     def create_tech_popup(self , step_text_widget1):
         tech_popup = QDialog()
@@ -697,7 +732,7 @@ class UI(QWidget):
         for i in demoData :
             history_item = QPushButton(i["title"])
             history_item.setStyleSheet("background-color: grey; margin: 5px; padding: 10px; border: 0; color: white; font-size: 20px; text-align: left; border-radius: 10px;")
-            history_item.clicked.connect(lambda _, i=i: print("History item clicked", i['title']))
+            history_item.clicked.connect(lambda _, item=i: self.load_history_item(item))
             
             history_scroll_layout.addWidget(history_item)
             
@@ -707,6 +742,23 @@ class UI(QWidget):
 
         history_widget.setLayout(history_layout)
         return history_widget
+    
+    def load_history_item(self, item):
+        # Switch to guide window
+        self.stacked_widget.setCurrentIndex(0)
+
+        # Load content into guide window
+        self.load_content_to_guide(item['content'])
+
+    def load_content_to_guide(self, content):
+        # Update the guide window with the content
+        self.step_text_widget1.setPlainText(content.get('project_type', ''))
+        self.step_text_widget2.setPlainText(content.get('software_description', ''))
+        self.step_text_widget3.setPlainText(content.get('response1', ''))
+        self.step_text_widget4.setPlainText(content.get('commands', ''))
+        self.step_text_widget5.setPlainText(content.get('response2', ''))
+        self.step_text_widget6.setPlainText(content.get('response3', ''))
+        self.step_text_widget7.setPlainText(content.get('response4', ''))
 
     def create_settings_widget(self):
         settings_widget = QWidget()

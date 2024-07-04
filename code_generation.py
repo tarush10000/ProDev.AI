@@ -292,3 +292,29 @@ def generate_content_with_debug(self, prompt, description):
             return ""
     QMessageBox.critical(self, 'Content Error', f'Failed to generate {description} content after {max_retries} attempts.')
     return ""
+def generate_strategies(self , query , technology):
+    prompt = f"After the development of {query} using {technology}, recommend the best testing strategies."
+    data = clean_response(self , generate_content_with_debug(self , prompt, "strategies"))
+    return  f"<div>{data}</div>"
+
+def generate_deployment(self, query , technology):
+    prompt = f"After the development of {query} using {technology}, recommend the best possible deployment methods."
+    data = clean_response(self ,generate_content_with_debug(self , prompt, "deployment"))
+    return  f"<div>{data}</div>"
+
+def generate_read_me(self, query , technology):
+    prompt = f"After the development of {query} using {technology}, give detailed and professional content for README file. For example, in a Python project, include sections for installation, usage, and contributing guidelines. In a C++ project, include sections for building, running, and testing the application."
+    data = clean_response(self ,generate_content_with_debug(self , prompt, "read_me"))
+    return  f"<div>{data}</div>"
+
+def clean_response(self, text):
+    # Convert text between asterisks to bold using HTML <b> tags
+    text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+    text = re.sub(r'\*(.*?)\*', r'<b>\1</b>', text)
+    # Convert text between triple quotes to preformatted text using HTML <pre> tags
+    text = re.sub(r'```(.*?)```', r'<pre>\1</pre>', text, flags=re.DOTALL)
+    # Replace newlines with <br> tags to preserve line breaks
+    text = text.replace('\n', '<br>')
+    # Remove '##' and make the following text bold
+    text = re.sub(r'##\s*(.*?)<br>', r'<b>\1</b><br>', text)
+    return text
