@@ -5,7 +5,8 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap, QIcon
 import sys, os, re
 from demoHistory import demoData
-from code_generation import create_folder , generate_file_structure , generate_strategies , generate_deployment , generate_read_me , save_read_me
+from code_generation import create_folder , generate_file_structure , generate_strategies , generate_deployment , generate_read_me , save_read_me,generate_implementation
+from documentation2 import main
 import google.generativeai as genai
 from edge_tts import Communicate
 import tempfile
@@ -347,13 +348,13 @@ class UI(QWidget):
         step_text_widget4.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 5px;")
 
         button_layout4 = QHBoxLayout()
-        play_button4 = QPushButton("Play")
-        edit_button4 = QPushButton("Edit")
+        # play_button4 = QPushButton("Play")
+        edit_button4 = QPushButton("Generate")
 
-        play_button4.clicked.connect(lambda checked: self.run_description(4))
-        edit_button4.clicked.connect(lambda checked: self.edit_step(4))
+        # play_button4.clicked.connect(lambda checked: self.run_description(4))
+        edit_button4.clicked.connect(lambda : self.save_implementation(step_text_widget4))
 
-        button_layout4.addWidget(play_button4)
+        # button_layout4.addWidget(play_button4)
         button_layout4.addWidget(edit_button4)
 
         step_layout4.addWidget(step_text_widget4)
@@ -613,7 +614,18 @@ class UI(QWidget):
         # testingStrategy = generate_strategies(self , query , technology)
         # print(testingStrategy)
         # step_text_widget5.append(testingStrategy)
-        
+    
+    # def save_implementation(self , step_text_widget4):
+    #     global implementation
+    #     implementation = main( folder_structure ,  query , technology)
+    #     print(implementation)
+    #     step_text_widget4.append(implementation)
+    def save_implementation(self , step_text_widget4):
+        global implementation
+        implementation = generate_implementation(self, query , technology ,folder_structure)
+        print(implementation)
+        step_text_widget4.append(implementation)
+    
     def save_folder_path(self ,  step_text_widget2):
         global folder_path
         folder_path = create_folder(self)
@@ -678,7 +690,7 @@ class UI(QWidget):
         self.chat = self.model.start_chat(history=[])
         global query, technology, folder_path, folder_structure
         # Collect context from global variables
-        initial_context = f"Software Development: {query}\n Technology: {technology}\n Folder Path: {folder_path}\n Folder Structure: {folder_structure}"
+        initial_context = f"Software Development: {query}\n Technology: {technology}\n Folder Path: {folder_path}\n Folder Structure: {folder_structure} Documentation: {documentation} Testing: {testing} Deployment: {deployment} implementation: {implementation}"
         initial_instructions = f"""You are Gemma, the ProDev.AI assistant. You're a friendly, witty, and knowledgeable software development expert. Your task is to help people learn software development and solve their coding queries with a touch of humor and enthusiasm. Stay on topic, but don't be afraid to throw in a pun or a joke now and then. If a question isn't related to software development or coding, gently steer the conversation back on track with a clever quip. Remember, you're not just sharing knowledge - you're making learning fun!\n\nContext:\n{initial_context}"""
         
         self.chat.send_message(initial_instructions)

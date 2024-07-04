@@ -7,7 +7,10 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QFileDialog, QVB
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted, InternalServerError
 # Ensure the API key is set
-genai.configure(api_key=os.getenv("Gemini_API"))
+import dotenv
+dotenv.load_dotenv()
+genai.configure(api_key="AIzaSyBUzzCCpq7N6sw5gz8Fg8AnmC9068n-GoA")
+
 
 # Initialize the generative model
 model = genai.GenerativeModel(model_name="gemini-1.5-pro")
@@ -291,6 +294,13 @@ def generate_content_with_debug(self, prompt, description):
             return ""
     QMessageBox.critical(self, 'Content Error', f'Failed to generate {description} content after {max_retries} attempts.')
     return ""
+
+def generate_implementation(self , query , technology , file_stucture):
+    prompt = f"Provide a professional and detailed implementation for a {query} project using {technology} whith the following file structure \n{file_stucture}."
+    data = clean_response(self ,generate_content_with_debug(self , prompt, "explanation"))
+    return f"<div>{data}</div>"
+    
+
 def generate_strategies(self , query , technology):
     prompt = f"After the development of {query} using {technology}, recommend the best testing strategies."
     data = clean_response(self , generate_content_with_debug(self , prompt, "strategies"))
