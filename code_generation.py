@@ -7,9 +7,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QFileDialog, QVB
 import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted, InternalServerError
 # Ensure the API key is set
-import dotenv
-dotenv.load_dotenv()
-genai.configure(api_key="AIzaSyBUzzCCpq7N6sw5gz8Fg8AnmC9068n-GoA")
+genai.configure(api_key=os.getenv("Gemini_API"))
 
 
 # Initialize the generative model
