@@ -8,7 +8,7 @@ from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor, QDesktopServices
 import sys, os
 from demoHistory import demoData
 from code_generation import create_folder , generate_file_structure
-import step_generation
+#import step_generation
 
 steps = ""
 category = []
@@ -400,7 +400,15 @@ class UI(QWidget):
 
         step_toolbox_layout.addWidget(step_toolbox)
         step_area_layout.addWidget(step_toolbox_widget)
-
+        
+        
+        self.step_text_widget1 = step_text_widget1
+        self.step_text_widget2 = step_text_widget2
+        self.step_text_widget3 = step_text_widget3
+        self.step_text_widget4 = step_text_widget4
+        self.step_text_widget5 = step_text_widget5
+        self.step_text_widget6 = step_text_widget6
+        self.step_text_widget7 = step_text_widget7
 
 
         step_description_layout = QVBoxLayout()
@@ -647,7 +655,7 @@ class UI(QWidget):
         for i in demoData :
             history_item = QPushButton(i["title"])
             history_item.setStyleSheet("background-color: grey; margin: 5px; padding: 10px; border: 0; color: white; font-size: 20px; text-align: left; border-radius: 10px;")
-            history_item.clicked.connect(lambda _, i=i: print("History item clicked", i['title']))
+            history_item.clicked.connect(lambda _, item=i: self.load_history_item(item))
             
             history_scroll_layout.addWidget(history_item)
             
@@ -657,6 +665,23 @@ class UI(QWidget):
 
         history_widget.setLayout(history_layout)
         return history_widget
+    
+    def load_history_item(self, item):
+        # Switch to guide window
+        self.stacked_widget.setCurrentIndex(0)
+
+        # Load content into guide window
+        self.load_content_to_guide(item['content'])
+
+    def load_content_to_guide(self, content):
+        # Update the guide window with the content
+        self.step_text_widget1.setPlainText(content.get('project_type', ''))
+        self.step_text_widget2.setPlainText(content.get('software_description', ''))
+        self.step_text_widget3.setPlainText(content.get('response1', ''))
+        self.step_text_widget4.setPlainText(content.get('commands', ''))
+        self.step_text_widget5.setPlainText(content.get('response2', ''))
+        self.step_text_widget6.setPlainText(content.get('response3', ''))
+        self.step_text_widget7.setPlainText(content.get('response4', ''))
 
     def create_settings_widget(self):
         settings_widget = QWidget()
