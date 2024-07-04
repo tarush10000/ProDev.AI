@@ -8,13 +8,13 @@ from typing import List
 import chromadb
 
 def resource_path(relative_path):
-    """Get the absolute path to a resource."""
+    #Get the absolute path to a resource.
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
 def load_pdf(file_path):
-    """Read text from a PDF file."""
+    # Read text from a PDF file.
     reader = PdfReader(file_path)
     text = ""
     for page in reader.pages:
@@ -22,13 +22,12 @@ def load_pdf(file_path):
     return text
 
 def split_text(text: str) -> List[str]:
-    """Split text into chunks."""
+    # Split text into chunks.
     split_text = re.split('\n \n', text)
     return [i for i in split_text if i != ""]
 
 class GeminiEmbeddingFunction(EmbeddingFunction):
-    """Embedding function using Gemini API."""
-    
+    # Embedding function using Gemini API.
     def __call__(self, input: Documents) -> Embeddings:
         gemini_api_key = os.getenv("Gemini_API")
         if not gemini_api_key:
@@ -39,7 +38,7 @@ class GeminiEmbeddingFunction(EmbeddingFunction):
         return genai.embed_content(model=model, content=input, task_type="retrieval_document", title=title)["embedding"]
 
 def create_chroma_db(documents: List[str], path: str, name: str):
-    """Create a Chroma DB collection."""
+    # Create a Chroma DB collection.
     chroma_client = chromadb.PersistentClient(path=path)
     db = chroma_client.create_collection(name=name, embedding_function=GeminiEmbeddingFunction())
     for i, d in enumerate(documents):
@@ -47,18 +46,18 @@ def create_chroma_db(documents: List[str], path: str, name: str):
     return db, name
 
 def load_chroma_collection(path: str, name: str):
-    """Load an existing Chroma DB collection."""
+    # Load an existing Chroma DB collection.
     chroma_client = chromadb.PersistentClient(path=path)
     db = chroma_client.get_collection(name=name, embedding_function=GeminiEmbeddingFunction())
     return db
 
 def get_relevant_passages(query: str, db, n_results: int) -> List[str]:
-    """Retrieve relevant passages from the Chroma DB."""
+    # Retrieve relevant passages from the Chroma DB.
     results = db.query(query_texts=[query], n_results=n_results)['documents']
     return [item for sublist in results for item in sublist]
 
 def make_rag_prompt(query: str, relevant_passages: List[str]) -> str:
-    """Create a prompt for RAG model using relevant passages."""
+    # Create a prompt for RAG model using relevant passages.
     escaped = " ".join(relevant_passages).replace("'", "").replace('"', "").replace("\n", " ")
     prompt = ("""You are a helpful and informative bot that answers questions using text from the reference passage included below. \
     Be sure to respond in a complete sentence, being comprehensive, including all relevant background information. \
@@ -72,7 +71,7 @@ def make_rag_prompt(query: str, relevant_passages: List[str]) -> str:
     return prompt
 
 def generate_answer1(prompt: str) -> str:
-    """Generate an answer using the Gemini API."""
+    # Generate an answer using the Gemini API.
     gemini_api_key = os.getenv("Gemini_API")
     if not gemini_api_key:
         raise ValueError("Gemini API Key not provided. Please provide Gemini_API as an environment variable")
@@ -82,10 +81,12 @@ def generate_answer1(prompt: str) -> str:
     return answer.text
 
 def generate_answer(db, query: str) -> str:
-    """Generate an answer for a query using RAG approach."""
-    relevant_passages = get_relevant_passages(query, db, n_results=3)
+    # Generate an answer for a query using RAG approach.
+    relevant_passages = get_relevant_passages("UI using PyQT", db, n_results=10)
+    print(relevant_passages)
     if not relevant_passages:
         return "I'm sorry, but this document does not mention how to make a calculator using PyQt6, so I cannot answer this question."
+    query = "How to make a calculator using PyQt6?"
     prompt = make_rag_prompt(query, relevant_passages)
     answer = generate_answer1(prompt)
     if not answer.strip():

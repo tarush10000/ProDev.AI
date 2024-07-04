@@ -8,7 +8,7 @@ import google.generativeai as genai
 from google.api_core.exceptions import ResourceExhausted, InternalServerError
 
 # Ensure the API key is set
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key=os.getenv("Gemini_API"))
 
 # Initialize the generative model
 model = genai.GenerativeModel(model_name="gemini-1.5-pro")

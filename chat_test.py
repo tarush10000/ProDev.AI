@@ -1,12 +1,11 @@
 import sys
 import json
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QLineEdit, QPushButton, QListWidgetItem, QLabel, QCheckBox
-from PyQt5.QtCore import QSize, Qt, QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import QSize, Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QColor, QPalette
 import google.generativeai as genai
 import os
 import pyttsx3
-import platform
 
 gemini_api_key = os.getenv("Gemini_API")
 
@@ -20,6 +19,12 @@ class TTSThread(QThread):
 
     def run(self):
         self.engine = pyttsx3.init()
+        voices = self.engine.getProperty('voices')
+
+        female_voice = next((voice for voice in voices if voice.gender == 'female'), None)
+        if female_voice:
+            self.engine.setProperty('voice', female_voice.id)
+        
         self.engine.say(self.text)
         self.engine.runAndWait()
         self.finished.emit()
@@ -166,8 +171,12 @@ class ChatbotApp(QWidget):
         if self.tts_thread and self.tts_thread.isRunning():
             self.tts_thread.stop()
         self.tts_thread = TTSThread(text)
-        self.tts_thread.finished.connect(self.tts_thread.deleteLater)
+        self.tts_thread.finished.connect(self.onTTSFinished)
         self.tts_thread.start()
+
+    def onTTSFinished(self):
+        self.tts_thread.deleteLater()
+        self.tts_thread = None
 
     def closeEvent(self, event):
         if self.tts_thread and self.tts_thread.isRunning():
