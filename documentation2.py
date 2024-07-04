@@ -95,7 +95,7 @@ def generate_answer(prompt: str) -> str:
     if not gemini_api_key:
         raise ValueError("Gemini API Key not provided. Please provide Gemini_API as an environment variable")
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-1.5-pro')
     answer = model.generate_content(prompt)
     return answer.text
 
@@ -107,7 +107,7 @@ def process_query(file_structure: str, user_request: str, tech_stack: str, db) -
     if not gemini_api_key:
         raise ValueError("Gemini API Key not provided. Please provide Gemini_API as an environment variable")
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-1.5-pro')
     rag_query = model.generate_content(f"Summarize the following query for RAG search: {query}").text
     
     relevant_passages = get_relevant_passages(rag_query, db, n_results=10)
