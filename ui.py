@@ -627,15 +627,20 @@ class UI(QWidget):
 
     def save_tests(self , step_text_widget5):
         testingStrategy = generate_strategies(self , query , technology)
+        global testing
+        testing = testingStrategy
         print(testingStrategy)
         step_text_widget5.append(testingStrategy)
     
     def save_deployment(self , step_text_widget6):
-        deployment = generate_deployment(self , query , technology)
-        print(deployment)
-        step_text_widget6.append(deployment)
+        deploymentres = generate_deployment(self , query , technology)
+        print(deploymentres)
+        global deployment
+        deployment = deploymentres
+        step_text_widget6.append(deploymentres)
         global folder_path
         print(folder_path)
+        
     def save_docs(self , step_text_widget7):
         read_me , read_meMD = generate_read_me(self , query , technology)
         global documentationMd
