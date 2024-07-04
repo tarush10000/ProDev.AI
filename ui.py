@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit,
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit, QSlider, QComboBox,
                             QMessageBox, QPlainTextEdit, QScrollArea, QToolBox, QGroupBox, QTextEdit, QFrame, QStackedWidget, 
                             QRadioButton, QButtonGroup , QDialog, QListWidgetItem, QListWidget, QCheckBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
@@ -17,6 +17,10 @@ query = ""
 technology = ""
 folder_path = ""
 folder_structure = ""
+implementation = ""
+testing = ""
+documentation = ""
+deployment = ""
 
 # Theme colors
 primary_color = "#0c0c0c"  # Dark mode background
@@ -26,11 +30,11 @@ class TTSThread(QThread):
     finished = pyqtSignal()
     error = pyqtSignal(str)
 
-    def __init__(self, text, voice = "en-US-EmmaMultilingualNeural", speed="+0%"):
+    def __init__(self, text, voice="en-US-EmmaMultilingualNeural", speed="+0%"):
         QThread.__init__(self)
         self.text = self.remove_emojis(text)
         self.voice = voice
-        self.speed = "+25%"  # e.g., "+50%" for 50% faster, "-50%" for 50% slower
+        self.speed = speed
         self.is_playing = False
 
     def remove_emojis(self, text):
@@ -101,6 +105,17 @@ class UI(QWidget):
         self.initGemini()
         self.tts_enabled = False
         self.tts_thread = None
+        self.tts_speed = "+0%"
+        self.tts_voice = "en-US-EmmaMultilingualNeural"
+
+    def update_tts_speed(self, speed):
+        speed_str = f"+{speed}%" if speed >= 0 else f"{speed}%"
+        self.tts_speed = speed_str
+        print(f"TTS speed updated to: {speed_str}")
+
+    def update_tts_voice(self, voice):
+        self.tts_voice = voice
+        print(f"TTS voice updated to: {voice}")
 
 
     def init_ui(self):
@@ -495,20 +510,62 @@ class UI(QWidget):
         step_description_content_layout.addLayout(chat_input_layout)
 
         # Add TTS toggle
+        tts_control_layout = QHBoxLayout()
+        tts_control_layout.setAlignment(Qt.AlignCenter)
+        tts_control_layout.setContentsMargins(0, 0, 0, 0)
+        tts_control_widget = QWidget()
+        tts_control_widget.setLayout(tts_control_layout)
+
         self.tts_toggle = QCheckBox('Enable TTS')
-        self.tts_toggle.setStyleSheet("color: white;")
+        self.tts_toggle.setStyleSheet("""
+            QCheckBox {
+                color: white;
+                font-size: 14px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+            QCheckBox::indicator:unchecked {
+                border: 2px solid #555;
+                background: #2A2F32;
+            }
+            QCheckBox::indicator:checked {
+                border: 2px solid #00A884;
+                background: #00A884;
+            }
+        """)
         self.tts_toggle.stateChanged.connect(self.toggleTTS)
-        step_description_content_layout.addWidget(self.tts_toggle)
+        tts_control_layout.addWidget(self.tts_toggle)
 
         self.stop_tts_button = QPushButton('Stop TTS')
+        self.stop_tts_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2A2F32;
+                color: white;
+                border: 1px solid #3A3F41;
+                border-radius: 15px;
+                padding: 5px 15px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #3A3F41;
+            }
+            QPushButton:pressed {
+                background-color: #1E2326;
+            }
+            QPushButton:disabled {
+                background-color: #1E2326;
+                color: #555;
+            }
+        """)
         self.stop_tts_button.clicked.connect(self.stopTTS)
         self.stop_tts_button.setEnabled(False)
-        step_description_content_layout.addWidget(self.stop_tts_button)
-
-        step_description_layout.addWidget(step_description_content_widget)
+        tts_control_layout.addWidget(self.stop_tts_button)
 
         step_description_layout.addWidget(step_description_heading_widget)
         step_description_layout.addWidget(step_description_content_widget)
+        step_description_layout.addWidget(tts_control_widget)
 
         # step_area_layout.addWidget(step_widget)
         step_area_layout.addWidget(step_description_widget)
@@ -526,7 +583,6 @@ class UI(QWidget):
         instruction_send_button.setIcon(QIcon(instruction_send_image))
         instruction_send_button.setCursor(Qt.PointingHandCursor)
         instruction_send_button.setFlat(True)
-        OS = "Windows"
         # instruction_send_button.clicked.connect(lambda: print("Instruction sent" , instruction_text_widget.toPlainText()))
         instruction_send_button.clicked.connect(lambda: self.querySubmit(instruction_text_widget.toPlainText() , step_text_widget1 , step_text_widget2 ,step_text_widget3,step_text_widget5))
 
@@ -543,9 +599,10 @@ class UI(QWidget):
         global query
         query = queryUser
         print(query)
-        # self.create_tech_popup( step_text_widget1 )
-        # folder_path = create_folder(self)
-        # step_text_widget2.setPlainText(folder_path)
+        self.create_tech_popup( step_text_widget1 )
+        global folder_path
+        folder_path = create_folder(self)
+        step_text_widget2.setPlainText(folder_path)
         # global technology
         # print(technology)
         # print(query)
@@ -565,6 +622,7 @@ class UI(QWidget):
         global folder_structure
         folder_structure = generate_file_structure(self , query , technology)
         step_text_widget3.setPlainText(folder_structure)
+
     def save_tests(self , step_text_widget5):
         testingStrategy = generate_strategies(self , query , technology)
         print(testingStrategy)
@@ -605,17 +663,19 @@ class UI(QWidget):
         genai.configure(api_key=os.getenv("Gemini_API"))
         self.model = genai.GenerativeModel('gemini-1.5-pro')
         self.chat = self.model.start_chat(history=[])
+        global query, technology, folder_path, folder_structure
+        # Collect context from global variables
+        initial_context = f"Software Development: {query}\n Technology: {technology}\n Folder Path: {folder_path}\n Folder Structure: {folder_structure}"
+        initial_instructions = f"""You are Gemma, the ProDev.AI assistant. You're a friendly, witty, and knowledgeable software development expert. Your task is to help people learn software development and solve their coding queries with a touch of humor and enthusiasm. Stay on topic, but don't be afraid to throw in a pun or a joke now and then. If a question isn't related to software development or coding, gently steer the conversation back on track with a clever quip. Remember, you're not just sharing knowledge - you're making learning fun!\n\nContext:\n{initial_context}"""
         
-        initial_instructions = """You are Gemma, the ProDev.AI assistant. You're a friendly, witty, and knowledgeable software development expert. Your task is to help people learn software development and solve their coding queries with a touch of humor and enthusiasm. Stay on topic, but don't be afraid to throw in a pun or a joke now and then. If a question isn't related to software development or coding, gently steer the conversation back on track with a clever quip. Remember, you're not just sharing knowledge - you're making learning fun!"""
         self.chat.send_message(initial_instructions)
         self.sendInitialBotMessage()
-
 
     def sendMessage(self):
         user_input = self.chat_input.text()
         if user_input.strip() == "":
             return
-        
+
         self.addMessage('User', user_input)
         self.chat_input.clear()
 
@@ -625,12 +685,12 @@ class UI(QWidget):
         try:
             response = self.getResponseFromAPI(user_input)
             self.chat_list.takeItem(self.chat_list.count() - 1)
-            
+
             if "Content Safety Violation" in response:
                 self.addMessage('Bot', response, is_warning=True)
             else:
                 self.addMessage('Bot', response)
-            
+
             if self.tts_enabled:
                 self.speakText(response)
         except Exception as e:
@@ -642,12 +702,12 @@ class UI(QWidget):
         item = QListWidgetItem()
         widget = QLabel(message)
         widget.setWordWrap(True)
-        
+
         if is_warning:
             bg_color = '#FF4136'  # Red background for warnings
         else:
             bg_color = '#005C4B' if sender == 'User' else '#1E1E1E'
-        
+
         widget.setStyleSheet(f"""
             background-color: {bg_color};
             color: white;
@@ -659,7 +719,7 @@ class UI(QWidget):
         size = widget.sizeHint()
         size.setHeight(size.height() + 20)  # Add extra height to ensure text is not cut off
         item.setSizeHint(size)
-        
+
         self.chat_list.addItem(item)
         self.chat_list.setItemWidget(item, widget)
 
@@ -669,13 +729,13 @@ class UI(QWidget):
         else:
             item.setTextAlignment(Qt.AlignLeft)
             widget.setStyleSheet(widget.styleSheet() + "margin-right: 180px;")
-        
+
         self.chat_list.scrollToBottom()
 
     def speakText(self, text):
         if self.tts_thread and self.tts_thread.isRunning():
             self.tts_thread.stop()
-        self.tts_thread = TTSThread(text)
+        self.tts_thread = TTSThread(text, voice=self.tts_voice, speed=self.tts_speed)
         self.tts_thread.finished.connect(self.onTTSFinished)
         self.tts_thread.start()
         self.stop_tts_button.setEnabled(True)
@@ -763,65 +823,171 @@ class UI(QWidget):
     def create_settings_widget(self):
         settings_widget = QWidget()
         settings_layout = QVBoxLayout()
-
-        # Theme selection
-        theme_layout = QHBoxLayout()
-        theme_label = QLabel("Theme:")
-        self.light_radio = QRadioButton("Light")
-        self.dark_radio = QRadioButton("Dark")
-        self.dark_radio.setChecked(True)
-        theme_group = QButtonGroup()
-        theme_group.addButton(self.light_radio)
-        theme_group.addButton(self.dark_radio)
-        theme_layout.addWidget(theme_label)
-        theme_layout.addWidget(self.light_radio)
-        theme_layout.addWidget(self.dark_radio)
         
+        # Apply stylesheets for a modern look
+        settings_widget.setStyleSheet("""
+            QWidget {
+                font-size: 14px;
+            }
+            QGroupBox {
+                font-weight: bold;
+                border: 1px solid gray;
+                border-radius: 5px;
+                margin-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top center;
+                padding: 0 3px;
+            }
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 14px;
+                margin: 4px 2px;
+                border-radius: 5px;
+                transition-duration: 0.4s;
+            }
+            QPushButton:hover {
+                background-color: white;
+                color: black;
+                border: 2px solid #4CAF50;
+            }
+            QLineEdit, QComboBox {
+                padding: 5px;
+                border: 1px solid gray;
+                border-radius: 3px;
+            }
+            QSlider::groove:horizontal {
+                border: 1px solid #bbb;
+                background: white;
+                height: 10px;
+                border-radius: 4px;
+            }
+            QSlider::sub-page:horizontal {
+                background: #4CAF50;
+                border: 1px solid #4CAF50;
+                height: 10px;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #4CAF50;
+                border: 1px solid #4CAF50;
+                width: 14px;
+                height: 14px;
+                border-radius: 7px;
+                margin: -5px 0;
+            }
+        """)
+
+        # API Settings
+        api_group = QGroupBox("API Settings")
+        api_layout = QVBoxLayout()
+
         # Gemini API setting
-        api_layout = QHBoxLayout()
+        gemini_layout = QHBoxLayout()
         api_label = QLabel("Gemini API Key:")
         self.api_input = QLineEdit()
         self.api_input.setPlaceholderText("Enter your Gemini API key")
         api_save_button = QPushButton("Save")
         api_save_button.clicked.connect(self.save_api_key)
-        api_layout.addWidget(api_label)
-        api_layout.addWidget(self.api_input)
-        api_layout.addWidget(api_save_button)
+        gemini_layout.addWidget(api_label)
+        gemini_layout.addWidget(self.api_input)
+        gemini_layout.addWidget(api_save_button)
 
-        # Add layouts to main settings layout
-        settings_layout.addLayout(theme_layout)
-        settings_layout.addLayout(api_layout)
+        api_layout.addLayout(gemini_layout)
+        api_group.setLayout(api_layout)
+
+        # TTS Settings
+        tts_group = QGroupBox("TTS Settings")
+        tts_layout = QVBoxLayout()
+
+        # TTS Speed
+        speed_layout = QHBoxLayout()
+        speed_label = QLabel("TTS Speed:")
+        self.speed_slider = QSlider(Qt.Horizontal)
+        self.speed_slider.setRange(-50, 100)
+        self.speed_slider.setValue(0)
+        self.speed_slider.setTickPosition(QSlider.TicksBelow)
+        self.speed_slider.setTickInterval(25)
+        self.speed_value_label = QLabel("0%")
+        self.speed_slider.valueChanged.connect(self.update_speed_label)
+        speed_layout.addWidget(speed_label)
+        speed_layout.addWidget(self.speed_slider)
+        speed_layout.addWidget(self.speed_value_label)
+
+        # TTS Voice
+        voice_layout = QHBoxLayout()
+        voice_label = QLabel("TTS Voice:")
+        self.voice_combo = QComboBox()
+        voices = [
+            "en-AU-NatashaNeural", "en-AU-WilliamNeural",
+            "en-CA-ClaraNeural", "en-CA-LiamNeural",
+            "en-HK-SamNeural", "en-HK-YanNeural",
+            "en-IN-NeerjaExpressiveNeural", "en-IN-NeerjaNeural", "en-IN-PrabhatNeural",
+            "en-IE-ConnorNeural", "en-IE-EmilyNeural",
+            "en-KE-AsiliaNeural", "en-KE-ChilembaNeural",
+            "en-NZ-MitchellNeural", "en-NZ-MollyNeural",
+            "en-NG-AbeoNeural", "en-NG-EzinneNeural",
+            "en-PH-JamesNeural", "en-PH-RosaNeural",
+            "en-SG-LunaNeural", "en-SG-WayneNeural",
+            "en-ZA-LeahNeural", "en-ZA-LukeNeural",
+            "en-TZ-ElimuNeural", "en-TZ-ImaniNeural",
+            "en-GB-LibbyNeural", "en-GB-MaisieNeural", "en-GB-RyanNeural", "en-GB-SoniaNeural", "en-GB-ThomasNeural",
+            "en-US-AvaMultilingualNeural", "en-US-AndrewMultilingualNeural",
+            "en-US-EmmaMultilingualNeural", "en-US-BrianMultilingualNeural",
+            "en-US-AvaNeural", "en-US-AndrewNeural", "en-US-EmmaNeural", "en-US-BrianNeural",
+            "en-US-AnaNeural", "en-US-AriaNeural", "en-US-ChristopherNeural",
+            "en-US-EricNeural", "en-US-GuyNeural", "en-US-JennyNeural",
+            "en-US-MichelleNeural", "en-US-RogerNeural", "en-US-SteffanNeural"
+        ]
+        self.voice_combo.addItems(voices)
+        voice_layout.addWidget(voice_label)
+        voice_layout.addWidget(self.voice_combo)
+
+        # Save TTS Settings button
+        save_tts_button = QPushButton("Save TTS Settings")
+        save_tts_button.clicked.connect(self.save_tts_settings)
+
+        tts_layout.addLayout(speed_layout)
+        tts_layout.addLayout(voice_layout)
+        tts_layout.addWidget(save_tts_button)
+        tts_group.setLayout(tts_layout)
+
+        # Add groups to main settings layout
+        settings_layout.addWidget(api_group)
+        settings_layout.addWidget(tts_group)
         settings_layout.addStretch()
-
-        # Connect theme change
-        self.light_radio.toggled.connect(self.change_theme)
-        self.dark_radio.toggled.connect(self.change_theme)
 
         settings_widget.setLayout(settings_layout)
         return settings_widget
 
-    def change_theme(self):
-        global primary_color, secondary_color
-        if self.light_radio.isChecked():
-            primary_color = "#ffffff"
-            secondary_color = "#000000"
-        else:
-            primary_color = "#0c0c0c"
-            secondary_color = "#ffffff"
-        self.update_theme()
-
-    def update_theme(self):
-        self.setStyleSheet(f"background-color: {primary_color}; color: {secondary_color};")
-        # Update other widgets' styles as needed
+    def update_speed_label(self, value):
+        self.speed_value_label.setText(f"{value}%")
 
     def save_api_key(self):
         api_key = self.api_input.text()
         if api_key:
-            os.environ['GEMINI_API'] = api_key
+            os.environ['Gemini_API'] = api_key
             QMessageBox.information(self, "Success", "Gemini API key saved successfully!")
         else:
             QMessageBox.warning(self, "Error", "Please enter a valid API key.")
 
+    def save_tts_settings(self):
+        speed = self.speed_slider.value()
+        voice = self.voice_combo.currentText()
+        self.update_tts_speed(speed)
+        self.update_tts_voice(voice)
+        QMessageBox.information(self, "Success", "TTS settings saved successfully!")
+
+    def update_theme(self):
+        self.setStyleSheet(f"background-color: {primary_color}; color: {secondary_color};")
+        
 if __name__ == '__main__':
     app = QApplication([])
     PDA_ui = UI()
