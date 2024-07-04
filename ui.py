@@ -1,21 +1,18 @@
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit, 
-                            QComboBox, QMessageBox, QStyle, QTableWidget, QTableWidgetItem, QAbstractItemView, 
-                            QPlainTextEdit, QScrollArea, QHeaderView, QDateEdit, QTimeEdit, QCompleter, 
-                            QAbstractScrollArea, QSizePolicy, QFileSystemModel, QSplitter, QInputDialog,QToolBox, QGroupBox, QTextEdit, 
-                            QFileDialog, QFrame, QTreeView, QStackedWidget, QRadioButton, QButtonGroup , QDialog)
-from PyQt5.QtCore import Qt, QDateTime, QDate, QTime, pyqtSignal, QObject, QThread, QUrl
-from PyQt5.QtGui import QFont, QPixmap, QIcon, QTextCursor, QDesktopServices
-import sys, os
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QPushButton, QApplication, QHBoxLayout, QLineEdit,
+                            QMessageBox, QPlainTextEdit, QScrollArea, QToolBox, QGroupBox, QTextEdit, QFrame, QStackedWidget, 
+                            QRadioButton, QButtonGroup , QDialog, QListWidgetItem, QListWidget, QCheckBox)
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtGui import QPixmap, QIcon
+import sys, os, re
 from demoHistory import demoData
 from code_generation import create_folder , generate_file_structure , generate_strategies , generate_deployment , generate_read_me
-#import step_generation
+import google.generativeai as genai
+from edge_tts import Communicate
+import tempfile
+import pygame
+import asyncio
+import emoji
 
-steps = ""
-category = []
-coding = []
-codes = []
-count = 0
-max_count = 0
 query = ""
 technology = ""
 folder_path = ""
@@ -24,6 +21,68 @@ folder_structure = ""
 # Theme colors
 primary_color = "#0c0c0c"  # Dark mode background
 secondary_color = "#ffffff"  # Dark mode text
+
+class TTSThread(QThread):
+    finished = pyqtSignal()
+    error = pyqtSignal(str)
+
+    def __init__(self, text, voice = "en-US-EmmaMultilingualNeural", speed="+0%"):
+        QThread.__init__(self)
+        self.text = self.remove_emojis(text)
+        self.voice = voice
+        self.speed = "+25%"  # e.g., "+50%" for 50% faster, "-50%" for 50% slower
+        self.is_playing = False
+
+    def remove_emojis(self, text):
+        # Remove emojis
+        text = emoji.replace_emoji(text, replace='')
+        # Remove any leftover unicode characters that might be emojis
+        text = re.sub(r'[^\x00-\x7F]+', '', text)
+        # Remove extra whitespace
+        text = ' '.join(text.split())
+        return text
+
+    async def tts_to_file(self):
+        communicate = Communicate(self.text, self.voice, rate=self.speed)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as temp_file:
+            self.temp_filename = temp_file.name
+        await communicate.save(self.temp_filename)
+
+    def run(self):
+        try:
+            asyncio.run(self.tts_to_file())
+
+            pygame.mixer.init()
+            try:
+                pygame.mixer.music.load(self.temp_filename)
+            except pygame.error as e:
+                self.error.emit(f"Failed to load audio: {str(e)}")
+                return
+
+            pygame.mixer.music.play()
+            if not pygame.mixer.music.get_busy():
+                self.error.emit("Music isn't playing")
+                return
+
+            self.is_playing = True
+
+            while pygame.mixer.music.get_busy() and self.is_playing:
+                pygame.time.Clock().tick(10)
+
+        except Exception as e:
+            self.error.emit(f"Error in TTS: {str(e)}")
+        finally:
+            pygame.mixer.quit()
+            if os.path.exists(self.temp_filename):
+                os.unlink(self.temp_filename)
+            self.finished.emit()
+
+    def stop(self):
+        self.is_playing = False
+        if pygame.mixer.get_init():
+            pygame.mixer.music.stop()
+        self.wait()
+
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
@@ -39,6 +98,10 @@ class UI(QWidget):
         self.theme = "dark"
         self.init_ui()
         self.show()
+        self.initGemini()
+        self.tts_enabled = False
+        self.tts_thread = None
+
 
     def init_ui(self):
         self.setWindowTitle('ProDev.AI')
@@ -161,50 +224,6 @@ class UI(QWidget):
         step_area_widget.setStyleSheet("padding: 10px;")
         step_area_widget.setFixedHeight(int(screen_height * 0.75))
         step_area_widget.setFixedWidth(int(screen_width * 0.94))
-
-        # step_layout = QVBoxLayout()
-        # step_layout.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
-        # step_widget = QWidget()
-        # step_widget.setLayout(step_layout)
-        # step_widget.setStyleSheet("padding: 10px;  border: 1px solid rgb(255,255,255); border-radius: 20px")
-        # step_edit_play_layout = QHBoxLayout()
-        # step_edit_play_layout.setAlignment(Qt.AlignRight)
-        # step_edit_play_widget = QWidget()
-        # step_edit_play_widget.setLayout(step_edit_play_layout)
-        # step_edit_play_widget.setStyleSheet("padding: 10px; border: 0px;")
-        # step_edit_button = QPushButton()
-        # step_edit_image = QPixmap(resource_path('images/edit.png'))
-        # step_edit_image = step_edit_image.scaledToHeight(int(screen_height * 0.05))
-        # step_edit_button.setIcon(QIcon(step_edit_image))
-        # step_edit_button.setCursor(Qt.PointingHandCursor)
-        # step_edit_button.setFlat(True)
-        # step_edit_button.clicked.connect(lambda: self.edit_steps(step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button))
-        # step_save_button = QPushButton()
-        # step_save_image = QPixmap(resource_path('images/save.png'))
-        # step_save_image = step_save_image.scaledToHeight(int(screen_height * 0.05))
-        # step_save_button.setIcon(QIcon(step_save_image))
-        # step_save_button.setCursor(Qt.PointingHandCursor)
-        # step_save_button.setFlat(True)
-        # step_save_button.setVisible(False)
-        # step_save_button.clicked.connect(lambda: self.save_edit_steps(step_edit_button, step_save_button, step_text_widget, step_edit_play_layout, step_play_button))
-        # step_play_button = QPushButton()
-        # step_play_image = QPixmap(resource_path('images/play.png'))
-        # step_play_image = step_play_image.scaledToHeight(int(screen_height * 0.05))
-        # step_play_button.setIcon(QIcon(step_play_image))
-        # step_play_button.setCursor(Qt.PointingHandCursor)
-        # step_play_button.setFlat(True)
-        # step_play_button.clicked.connect(lambda: self.run_description(step_description_widget, step_play_button, step_prev_button, step_next_button, step_heading_label, step_text_widget))
-        
-        # step_edit_play_layout.addWidget(step_edit_button)
-        # step_edit_play_layout.addWidget(step_save_button)
-        # step_edit_play_layout.addWidget(step_play_button)
-
-        # step_text_widget = QPlainTextEdit()
-        # step_text_widget.setStyleSheet("background-color: rgb(50,50,50); color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 23px")
-        # step_text_widget.setFixedWidth(int(screen_width * 0.5))
-        # step_text_widget.setReadOnly(True)
-        # step_layout.addWidget(step_edit_play_widget)
-        # step_layout.addWidget(step_text_widget)
 
         step_layout = QVBoxLayout()
         step_layout.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)
@@ -426,31 +445,13 @@ class UI(QWidget):
         step_description_heading_widget.setLayout(step_description_heading_layout)
         step_description_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
         step_description_heading_widget.setFixedHeight(int(screen_height * 0.04))
-        global count
-        step_heading_label = QLabel("Step " + str(count))
-        step_heading_label.setVisible(False)
+
+        step_heading_label = QLabel("Ask Gemma")
+        step_heading_label.setVisible(True)
         step_heading_label.setStyleSheet("color: rgb(255,255,255); font-size: 17px; font: Montserrat; border: 0px; font-weight: 500")
-        step_prev_button_image = QPixmap(resource_path('images/prev.png'))
-        step_prev_button_image = step_prev_button_image.scaledToHeight(int(screen_height * 0.03))
-        step_prev_button = QPushButton()
-        step_prev_button.setIcon(QIcon(step_prev_button_image))
-        step_prev_button.setCursor(Qt.PointingHandCursor)
-        step_prev_button.setFlat(True)
-        step_prev_button.setVisible(False)
-        step_prev_button.clicked.connect(lambda: self.prev_step(step_heading_label, code_heading_label, code_heading_widget, code_text_widget, code_description_heading_widget, code_description_text_widget))
-        step_next_button_image = QPixmap(resource_path('images/next.png'))
-        step_next_button_image = step_next_button_image.scaledToHeight(int(screen_height * 0.03))
-        step_next_button = QPushButton()
-        step_next_button.setIcon(QIcon(step_next_button_image))
-        step_next_button.setCursor(Qt.PointingHandCursor)
-        step_next_button.setVisible(False)
-        step_next_button.setFlat(True)
-        step_next_button.clicked.connect(lambda: step_generation.next_step(step_heading_label, code_heading_label, code_heading_widget, code_text_widget, code_description_heading_widget, code_description_text_widget))
-
-        step_description_heading_layout.addWidget(step_prev_button)
+        
         step_description_heading_layout.addWidget(step_heading_label)
-        step_description_heading_layout.addWidget(step_next_button)
-
+        
         step_description_content_layout = QVBoxLayout()
         step_description_content_layout.setSpacing(30)
         step_description_content_widget = QWidget()
@@ -459,107 +460,52 @@ class UI(QWidget):
         step_description_content_layout.setAlignment(Qt.AlignVCenter)
         step_description_content_layout.setContentsMargins(15, 15, 15, 15)
 
-        code_layout = QVBoxLayout()
-        code_layout.setAlignment(Qt.AlignTop)
-        code_layout.setContentsMargins(0, 0, 0, 0)
-        code_widget = QWidget()
-        code_widget.setLayout(code_layout)
-        code_widget.setStyleSheet("background-color: #212121;border-radius: 20px; border: 0px; margin: 0px; padding: 0px;")
-        code_widget.setFixedHeight(int(screen_height * 0.3))
-        code_heading_layout = QHBoxLayout()
-        code_heading_layout.setContentsMargins(0,0,0,0)
-        code_heading_widget = QWidget()
-        code_heading_widget.setLayout(code_heading_layout)
-        code_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
-        code_heading_widget.setFixedHeight(int(screen_height * 0.04))
-        code_heading_label = QLabel("Code")
-        code_heading_label.setStyleSheet("color: rgb(255,255,255); font-size: 17px; font: Montserrat; border: 0px; font-weight: 500")
-        code_heading_label.setFixedWidth(int(screen_width * 0.3))
-        code_copy_image = QPixmap(resource_path('images/copy.png'))
-        code_copy_image = code_copy_image.scaledToHeight(int(screen_height * 0.03))
-        code_copy_button = QPushButton()
-        code_copy_button.setIcon(QIcon(code_copy_image))
-        code_copy_button.setCursor(Qt.PointingHandCursor)
-        code_copy_button.setFlat(True)
-        code_copy_button.clicked.connect(lambda: self.copy_code(code_text_widget))
-        code_edit_image = QPixmap(resource_path('images/edit.png'))
-        code_edit_image = code_edit_image.scaledToHeight(int(screen_height * 0.03))
-        code_edit_button = QPushButton()
-        code_edit_button.setIcon(QIcon(code_edit_image))
-        code_edit_button.setCursor(Qt.PointingHandCursor)
-        code_edit_button.setFlat(True)
-        code_edit_button.setVisible(True)
-        code_edit_button.clicked.connect(lambda: self.edit_code(code_edit_button, code_save_button, code_text_widget, code_play_button))
-        code_save_image = QPixmap(resource_path('images/save.png'))
-        code_save_image = code_save_image.scaledToHeight(int(screen_height * 0.03))
-        code_save_button = QPushButton()
-        code_save_button.setIcon(QIcon(code_save_image))
-        code_save_button.setCursor(Qt.PointingHandCursor)
-        code_save_button.setFlat(True)
-        code_save_button.setVisible(False)
-        code_save_button.clicked.connect(lambda: self.save_code(code_edit_button, code_save_button, code_text_widget, code_play_button))
-        code_play_image = QPixmap(resource_path('images/play.png'))
-        code_play_image = code_play_image.scaledToHeight(int(screen_height * 0.03))
-        code_play_button = QPushButton()
-        code_play_button.setIcon(QIcon(code_play_image))
-        code_play_button.setCursor(Qt.PointingHandCursor)
-        code_play_button.setFlat(True)
-        code_play_button.setVisible(True)
-        code_play_button.clicked.connect(lambda: step_generation.run_code(code_text_widget, code_play_button))
-        
-        code_heading_layout.addWidget(code_heading_label)
-        code_heading_layout.addWidget(code_copy_button)
-        code_heading_layout.addWidget(code_edit_button)
-        code_heading_layout.addWidget(code_save_button)
-        code_heading_layout.addWidget(code_play_button)
+        # Add chatbot components
+        self.chat_list = QListWidget()
+        self.chat_list.setStyleSheet("""
+            QListWidget {
+                background-color: #121B22;
+                border: none;
+            }
+            QListWidget::item {
+                border: none;
+                margin: 5px;
+            }
+        """)
+        step_description_content_layout.addWidget(self.chat_list)
 
-        code_text_layout = QVBoxLayout()
-        code_text_widget = QPlainTextEdit()
-        code_text_widget.setStyleSheet("color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 20px; font: Montserrat; border-top-left-radius: 0px; border-top-right-radius: 0px; border: 0px;")
-        code_text_widget.setLayout(code_text_layout) 
-        code_text_widget.setReadOnly(True)
+        chat_input_layout = QHBoxLayout()
+        self.chat_input = QLineEdit()
+        self.chat_input.setStyleSheet("""
+            background-color: #2A2F32;
+            color: white;
+            border: 1px solid #3A3F41;
+            border-radius: 20px;
+            padding: 10px 15px;
+            font-size: 14px;
+        """)
+        self.chat_input.setPlaceholderText("Type a message...")
+        self.chat_input.returnPressed.connect(self.sendMessage)
+        self.chat_send_button = QPushButton('Send')
+        self.chat_send_button.clicked.connect(self.sendMessage)
+        self.chat_send_button.setStyleSheet("background-color: #00A884; color: white;")
+        chat_input_layout.addWidget(self.chat_input)
+        chat_input_layout.addWidget(self.chat_send_button)
 
-        code_layout.addWidget(code_heading_widget)  
-        code_layout.addWidget(code_text_widget)
+        step_description_content_layout.addLayout(chat_input_layout)
 
-        code_description_layout = QVBoxLayout()
-        code_description_layout.setAlignment(Qt.AlignTop)
-        code_description_layout.setContentsMargins(0, 0, 0, 0)
-        code_description_widget = QWidget()
-        code_description_widget.setLayout(code_description_layout)
-        code_description_widget.setStyleSheet("background-color: #212121;padding: 10px; border-radius: 20px; border: 0px;")
-        code_description_widget.setFixedHeight(int(screen_height * 0.3))
-        code_description_heading_layout = QHBoxLayout()
-        code_description_heading_layout.setContentsMargins(0,0,0,0)
-        code_description_heading_widget = QWidget()
-        code_description_heading_widget.setLayout(code_description_heading_layout)
-        code_description_heading_widget.setStyleSheet("background-color: #3A46AC; padding: 10px; border-bottom-left-radius: 0px; border-bottom-right-radius: 0px; border: 0px; margin: 0px")
-        code_description_heading_widget.setFixedHeight(int(screen_height * 0.04)) 
-        code_description_heading_label = QLabel("Description")
-        code_description_heading_label.setFixedWidth(int(screen_width * 0.3))
-        code_description_heading_label.setStyleSheet("color: rgb(255,255,255); font-size: 17px; font: Montserrat; border: 0px; font-weight: 500")
-        code_description_add_image = QPixmap(resource_path('images/add.png'))
-        code_description_add_image = code_description_add_image.scaledToHeight(int(screen_height * 0.03))
-        code_description_add_button = QPushButton()
-        code_description_add_button.setIcon(QIcon(code_description_add_image))
-        code_description_add_button.setCursor(Qt.PointingHandCursor)
-        code_description_add_button.setFlat(True)
-        code_description_add_button.clicked.connect(lambda: step_generation.add_description(code_text_widget, code_description_text_widget))
-        code_description_text_layout = QVBoxLayout()
-        code_description_text_widget = QPlainTextEdit()
-        code_description_text_widget.setStyleSheet("color: rgb(255,255,255); font-size: 17px; padding: 10px; border: 0px; border-radius: 20px; font: Montserrat; border-top-left-radius: 0px; border-top-right-radius: 0px; border: 0px;")
-        code_description_text_widget.setLayout(code_description_text_layout)
-        code_description_text_widget.setReadOnly(True)
+        # Add TTS toggle
+        self.tts_toggle = QCheckBox('Enable TTS')
+        self.tts_toggle.setStyleSheet("color: white;")
+        self.tts_toggle.stateChanged.connect(self.toggleTTS)
+        step_description_content_layout.addWidget(self.tts_toggle)
 
-        code_description_heading_layout.addWidget(code_description_heading_label)
-        code_description_heading_layout.addWidget(code_description_add_button)
+        self.stop_tts_button = QPushButton('Stop TTS')
+        self.stop_tts_button.clicked.connect(self.stopTTS)
+        self.stop_tts_button.setEnabled(False)
+        step_description_content_layout.addWidget(self.stop_tts_button)
 
-        code_description_layout.addWidget(code_description_heading_widget)
-        code_description_layout.addWidget(code_description_text_widget)
-
-
-        step_description_content_layout.addWidget(code_widget)
-        step_description_content_layout.addWidget(code_description_widget)
+        step_description_layout.addWidget(step_description_content_widget)
 
         step_description_layout.addWidget(step_description_heading_widget)
         step_description_layout.addWidget(step_description_content_widget)
@@ -655,7 +601,111 @@ class UI(QWidget):
         technology = tech
         step_text_widget1.setPlainText(tech)
         
-    
+    def initGemini(self):
+        genai.configure(api_key=os.getenv("Gemini_API"))
+        self.model = genai.GenerativeModel('gemini-1.5-pro')
+        self.chat = self.model.start_chat(history=[])
+        
+        initial_instructions = """You are Gemma, the ProDev.AI assistant. You're a friendly, witty, and knowledgeable software development expert. Your task is to help people learn software development and solve their coding queries with a touch of humor and enthusiasm. Stay on topic, but don't be afraid to throw in a pun or a joke now and then. If a question isn't related to software development or coding, gently steer the conversation back on track with a clever quip. Remember, you're not just sharing knowledge - you're making learning fun!"""
+        self.chat.send_message(initial_instructions)
+        self.sendInitialBotMessage()
+
+
+    def sendMessage(self):
+        user_input = self.chat_input.text()
+        if user_input.strip() == "":
+            return
+        
+        self.addMessage('User', user_input)
+        self.chat_input.clear()
+
+        self.addMessage('Bot', '...')
+        QApplication.processEvents()
+
+        try:
+            response = self.getResponseFromAPI(user_input)
+            self.chat_list.takeItem(self.chat_list.count() - 1)
+            
+            if "Content Safety Violation" in response:
+                self.addMessage('Bot', response, is_warning=True)
+            else:
+                self.addMessage('Bot', response)
+            
+            if self.tts_enabled:
+                self.speakText(response)
+        except Exception as e:
+            self.chat_list.takeItem(self.chat_list.count() - 1)
+            error_message = f"An error occurred: {str(e)}. Please try again later or check your internet connection."
+            self.addMessage('Bot', error_message)
+
+    def addMessage(self, sender, message, is_warning=False):
+        item = QListWidgetItem()
+        widget = QLabel(message)
+        widget.setWordWrap(True)
+        
+        if is_warning:
+            bg_color = '#FF4136'  # Red background for warnings
+        else:
+            bg_color = '#005C4B' if sender == 'User' else '#1E1E1E'
+        
+        widget.setStyleSheet(f"""
+            background-color: {bg_color};
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            max-width: 700px;
+        """)
+        widget.adjustSize()
+        size = widget.sizeHint()
+        size.setHeight(size.height() + 20)  # Add extra height to ensure text is not cut off
+        item.setSizeHint(size)
+        
+        self.chat_list.addItem(item)
+        self.chat_list.setItemWidget(item, widget)
+
+        if sender == 'User':
+            item.setTextAlignment(Qt.AlignRight)
+            widget.setStyleSheet(widget.styleSheet() + "margin-left: 180px;")
+        else:
+            item.setTextAlignment(Qt.AlignLeft)
+            widget.setStyleSheet(widget.styleSheet() + "margin-right: 180px;")
+        
+        self.chat_list.scrollToBottom()
+
+    def speakText(self, text):
+        if self.tts_thread and self.tts_thread.isRunning():
+            self.tts_thread.stop()
+        self.tts_thread = TTSThread(text)
+        self.tts_thread.finished.connect(self.onTTSFinished)
+        self.tts_thread.start()
+        self.stop_tts_button.setEnabled(True)
+
+    def stopTTS(self):
+        if self.tts_thread and self.tts_thread.isRunning():
+            self.tts_thread.stop()
+        self.stop_tts_button.setEnabled(False)
+
+    def onTTSFinished(self):
+        self.tts_thread.deleteLater()
+        self.tts_thread = None
+        self.stop_tts_button.setEnabled(False)
+
+    def closeEvent(self, event):
+        if self.tts_thread and self.tts_thread.isRunning():
+            self.tts_thread.stop()
+        event.accept()
+
+    def getResponseFromAPI(self, user_input):
+        response = self.chat.send_message(user_input)
+        return response.text
+
+    def sendInitialBotMessage(self):
+        initial_message = "Hey there! 👋 I'm Gemma, your friendly neighborhood software development guru. Got any burning questions about coding or tech? I'm all ears and ready to help! 💻✨"
+        self.addMessage('Bot', initial_message)
+
+    def toggleTTS(self, state):
+        self.tts_enabled = state == Qt.Checked
+
     
     def create_history_widget(self):
         history_widget = QWidget()

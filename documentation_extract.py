@@ -76,7 +76,7 @@ def generate_answer1(prompt: str) -> str:
     if not gemini_api_key:
         raise ValueError("Gemini API Key not provided. Please provide Gemini_API as an environment variable")
     genai.configure(api_key=gemini_api_key)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-1.5-pro')
     answer = model.generate_content(prompt)
     return answer.text
 
