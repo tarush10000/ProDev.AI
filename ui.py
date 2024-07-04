@@ -597,9 +597,9 @@ class UI(QWidget):
         global query
         query = queryUser
         print(query)
-        # self.create_tech_popup( step_text_widget1 )
-        # folder_path = create_folder(self)
-        # step_text_widget2.setPlainText(folder_path)
+        self.create_tech_popup( step_text_widget1 )
+        folder_path = create_folder(self)
+        step_text_widget2.setPlainText(folder_path)
         # global technology
         # print(technology)
         # print(query)
