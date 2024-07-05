@@ -688,7 +688,7 @@ class UI(QWidget):
         genai.configure(api_key=os.getenv("Gemini_API"))
         self.model = genai.GenerativeModel('gemini-1.5-pro')
         self.chat = self.model.start_chat(history=[])
-        global query, technology, folder_path, folder_structure
+        global query, technology, folder_path, folder_structure, documentation, testing, deployment, implementation
         # Collect context from global variables
         initial_context = f"Software Development: {query}\n Technology: {technology}\n Folder Path: {folder_path}\n Folder Structure: {folder_structure} Documentation: {documentation} Testing: {testing} Deployment: {deployment} implementation: {implementation}"
         initial_instructions = f"""You are Gemma, the ProDev.AI assistant. You're a friendly, witty, and knowledgeable software development expert. Your task is to help people learn software development and solve their coding queries with a touch of humor and enthusiasm. Stay on topic, but don't be afraid to throw in a pun or a joke now and then. If a question isn't related to software development or coding, gently steer the conversation back on track with a clever quip. Remember, you're not just sharing knowledge - you're making learning fun!\n\nContext:\n{initial_context}"""

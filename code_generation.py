@@ -27,7 +27,7 @@ class FolderCreator(QWidget):
         self.response3 = None
         self.response4 = None
         self.response5 = None
-       
+        
     def initUI(self):
         self.setWindowTitle('Folder Creator')
 
