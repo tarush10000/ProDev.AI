@@ -56,6 +56,10 @@ Make sure you have the following installed:
 
 2. **Follow the instructions on the GUI to start developing your software with AI assistance**.
 
+### Watch our demo video
+https://drive.google.com/file/d/1ec7R0SPjcf6IeKhTl226_GKGHPJ8tVDp/view?usp=drive_link
+
+
 ## 🙏 Acknowledgments
 
 - Special thanks to the developers of Code Llama-13b, Mistral-7b, and the Ollama team for their amazing tools.
